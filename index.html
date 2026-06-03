@@ -17,14 +17,22 @@
             justify-content: center; align-items: center;
         }
         
-        .header { text-align: center; margin-bottom: 15px; }
+        .header { text-align: center; margin-bottom: 15px; position: relative; }
         
-        /* Added a smooth transition so the title fades beautifully between colors */
         .header h1 { 
             margin: 0; font-size: 2.5rem; font-weight: 600; letter-spacing: -0.5px; 
             transition: color 0.4s ease, text-shadow 0.4s ease; 
         }
         .header p { margin: 5px 0 0 0; color: #8E8E93; font-size: 1.1rem; }
+
+        /* The link to your secondary Database page */
+        .database-link {
+            display: inline-block; margin-top: 15px; padding: 8px 20px;
+            background-color: #1C1C1E; color: #8E8E93; border-radius: 100px;
+            text-decoration: none; font-size: 0.9rem; font-weight: 600;
+            transition: all 0.2s ease;
+        }
+        .database-link:hover { color: #FFFFFF; background-color: #3A3A3C; }
 
         .toggle-container {
             display: flex; gap: 5px; background-color: #1C1C1E; 
@@ -41,21 +49,19 @@
             transition: all 0.2s ease; flex-shrink: 0; 
         }
         
-        /* 1. DEFAULT TIME BUTTON LOGIC */
         .time-btn:hover { color: #FFFFFF; }
         .time-btn.active {
             background-color: #3A3A3C; color: #FFFFFF; box-shadow: 0 2px 8px rgba(0,0,0,0.2);
         }
 
-        /* 2. DYNAMIC BRAND COLOR LOGIC FOR STOCKS (Uses CSS Variables) */
         .symbol-btn:hover { 
             color: var(--brand-color); 
-            background-color: rgba(255, 255, 255, 0.05); /* Subtle white highlight on hover */
+            background-color: rgba(255, 255, 255, 0.05); 
         }
         .symbol-btn.active {
             background-color: var(--brand-color); 
-            color: var(--text-color); /* Automatically flips between black/white text for readability */
-            box-shadow: 0 0 12.5px var(--brand-color); /* Emits a neon glow matching the brand */
+            color: var(--text-color); 
+            box-shadow: 0 0 12.5px var(--brand-color);
         }
 
         .legend-container {
@@ -79,14 +85,15 @@
 <body>
     
     <div class="header">
-        <h1 id="stock-title" style="color: #E31937; text-shadow: 0px 0px 20px #E3193766;">TSLA</h1>
+        <h1 id="stock-title" style="color: #E31937; text-shadow: 0px 0px 12.5px #E3193766;">TSLA</h1>
         <p>Live Market Tracking & Volume</p>
+        <a href="data.html" class="database-link">View Market Database →</a>
     </div>
 
     <div class="toggle-container">
         <button class="toggle-btn symbol-btn active" style="--brand-color: #E31937; --text-color: #FFFFFF;" onclick="setSymbol('NASDAQ:TSLA', 'TSLA', '#E31937', this)">TSLA</button>
         <button class="toggle-btn symbol-btn" style="--brand-color: #76B900; --text-color: #000000;" onclick="setSymbol('NASDAQ:NVDA', 'NVDA', '#76B900', this)">NVDA</button>
-        <button class="toggle-btn symbol-btn" style="--brand-color: #FFFFFF; --text-color: #000000;" onclick="setSymbol('NASDAQ:AAPL', 'AAPL', '#FFFFFF', this)">AAPL</button>
+        <button class="toggle-btn symbol-btn" style="--brand-color: #BFBFBF; --text-color: #000000;" onclick="setSymbol('NASDAQ:AAPL', 'AAPL', '#BFBFBF', this)">AAPL</button>
         <button class="toggle-btn symbol-btn" style="--brand-color: #00A4EF; --text-color: #000000;" onclick="setSymbol('NASDAQ:MSFT', 'MSFT', '#00A4EF', this)">MSFT</button>
         <button class="toggle-btn symbol-btn" style="--brand-color: #FF9900; --text-color: #000000;" onclick="setSymbol('NASDAQ:AMZN', 'AMZN', '#FF9900', this)">AMZN</button>
         <button class="toggle-btn symbol-btn" style="--brand-color: #4285F4; --text-color: #FFFFFF;" onclick="setSymbol('NASDAQ:GOOG', 'GOOG', '#4285F4', this)">GOOG</button>
@@ -94,20 +101,19 @@
     </div>
 
     <div class="toggle-container">
-        <button class="toggle-btn time-btn" onclick="setTime('1D', this)">1D</button>
-        <button class="toggle-btn time-btn" onclick="setTime('5D', this)">1W</button>
-        <button class="toggle-btn time-btn" onclick="setTime('1M', this)">1M</button>
-        <button class="toggle-btn time-btn" onclick="setTime('3M', this)">3M</button>
+        <button class="toggle-btn time-btn" onclick="setTime('interval', '1', this)">1m</button>
+        <button class="toggle-btn time-btn" onclick="setTime('interval', '2', this)">2m</button>
+        <button class="toggle-btn time-btn" onclick="setTime('interval', '3', this)">3m</button>
+        <button class="toggle-btn time-btn" onclick="setTime('interval', '5', this)">5m</button>
+        <button class="toggle-btn time-btn" onclick="setTime('interval', '15', this)">15m</button>
+        <button class="toggle-btn time-btn" onclick="setTime('interval', '60', this)">1H</button>
+        <button class="toggle-btn time-btn" onclick="setTime('interval', '240', this)">4H</button>
         
-        <button class="toggle-btn time-btn" onclick="setTime('6M', this)">6M</button>
-        <button class="toggle-btn time-btn active" onclick="setTime('YTD', this)">YTD</button>
-        <button class="toggle-btn time-btn" onclick="setTime('12M', this)">1Y</button>
-        <button class="toggle-btn time-btn" onclick="setTime('24M', this)">2Y</button>
-        
-        <button class="toggle-btn time-btn" onclick="setTime('36M', this)">3Y</button>
-        <button class="toggle-btn time-btn" onclick="setTime('48M', this)">4Y</button>
-        <button class="toggle-btn time-btn" onclick="setTime('60M', this)">5Y</button>
-        <button class="toggle-btn time-btn" onclick="setTime('ALL', this)">Max</button>
+        <button class="toggle-btn time-btn" onclick="setTime('range', '1D', this)">24H</button>
+        <button class="toggle-btn time-btn" onclick="setTime('range', '5D', this)">Week</button>
+        <button class="toggle-btn time-btn" onclick="setTime('range', '1M', this)">Month</button>
+        <button class="toggle-btn time-btn active" onclick="setTime('range', 'YTD', this)">YTD</button>
+        <button class="toggle-btn time-btn" onclick="setTime('range', 'ALL', this)">Max</button>
     </div>
 
     <div class="legend-container">
@@ -123,8 +129,10 @@
           
           <script type="text/javascript">
           
+          // Reverted back to storing BOTH Mode and Value
           let currentSymbol = "NASDAQ:TSLA";
-          let currentRange = "YTD"; 
+          let currentTimeMode = "range"; 
+          let currentTimeValue = "YTD";
 
           function setSymbol(symbolCode, symbolName, brandColor, clickedButton) {
               if (clickedButton) {
@@ -142,13 +150,14 @@
               renderChart();
           }
 
-          function setTime(rangeValue, clickedButton) {
+          function setTime(mode, value, clickedButton) {
               if (clickedButton) {
                   let buttons = document.querySelectorAll('.time-btn');
                   buttons.forEach(btn => btn.classList.remove('active'));
                   clickedButton.classList.add('active');
               }
-              currentRange = rangeValue;
+              currentTimeMode = mode;
+              currentTimeValue = value;
               renderChart();
           }
 
@@ -158,7 +167,6 @@
               let widgetConfig = {
                   "autosize": true,
                   "symbol": currentSymbol,   
-                  "range": currentRange,     // Perfectly applies your viewport scaling to all 12 buttons!
                   "timezone": "America/Chicago", 
                   "theme": "dark",
                   "style": "3", 
@@ -168,7 +176,15 @@
                   "hide_top_toolbar": true, 
                   "hide_legend": true, 
                   "container_id": "tradingview_chart"
+                  // 'studies' is still safely deleted so you don't get the double volume bug!
               };
+
+              // Reverted back to the if/else logic so it safely routes Interval vs Range!
+              if (currentTimeMode === "range") {
+                  widgetConfig.range = currentTimeValue;
+              } else {
+                  widgetConfig.interval = currentTimeValue;
+              }
 
               new TradingView.widget(widgetConfig);
           }
