@@ -77,8 +77,13 @@
         }
         
         .chart-footer {
-            width: 85vw; text-align: right; margin-top: 8px;
-            font-size: 0.85rem; color: #8E8E93; font-weight: 400;
+            width: 85vw; display: flex; justify-content: space-between; align-items: center;
+            margin-top: 8px; font-size: 0.85rem; color: #8E8E93; font-weight: 400;
+        }
+        
+        #live-clock {
+            color: #FFFFFF; font-weight: 600;
+            font-variant-numeric: tabular-nums; 
         }
     </style>
 </head>
@@ -86,7 +91,7 @@
     
     <div class="header">
         <h1 id="stock-title" style="color: #E31937; text-shadow: 0px 0px 12.5px #E3193766;">TSLA</h1>
-        <p>Live Market Tracking & Volume</p>
+        <p id="market-status">Live Market Tracking & Volume</p>
         <a href="data.html" class="database-link">View End-Of-Day Market Close Database ▶</a>
     </div>
 
@@ -191,12 +196,58 @@
           }
 
           renderChart();
-          
+
+        // --- LIVE CLOCK & MARKET STATUS ENGINE ---
+          function updateClockAndStatus() {
+              const now = new Date();
+              
+              // 1. Live Central Time Clock
+              const timeOptions = { timeZone: 'America/Chicago', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true };
+              const timeString = now.toLocaleTimeString('en-US', timeOptions);
+              document.getElementById('live-clock').innerText = `Time: ${timeString} Central Time`;
+
+              // 2. Market Status Logic (Calculated safely in Central Time)
+              const ctString = now.toLocaleString("en-US", { timeZone: "America/Chicago" });
+              const ctDate = new Date(ctString);
+
+              const day = ctDate.getDay(); // 0 = Sunday, 6 = Saturday
+              const hour = ctDate.getHours(); // 0 to 23
+              const minute = ctDate.getMinutes(); // 0 to 59
+              
+              const timeInMinutes = (hour * 60) + minute;
+              const marketOpen = (8 * 60) + 30; // 8:30 AM CT
+              const marketClose = 15 * 60;      // 3:00 PM CT
+              
+              let isMarketOpen = false;
+              
+              // Check if it's a weekday and within market hours
+              if (day !== 0 && day !== 6) {
+                  if (timeInMinutes >= marketOpen && timeInMinutes < marketClose) {
+                      isMarketOpen = true;
+                  }
+              }
+              
+              // 3. Inject into the UI
+              const statusEl = document.getElementById('market-status');
+              if (isMarketOpen) {
+                  statusEl.innerHTML = `Live Market Tracking <span style="color: #76B900; font-weight: 600;">(Market Open)</span>`;
+              } else {
+                  statusEl.innerHTML = `Market Closed <span style="color: #E31937; font-weight: 600;">(At Close)</span>`;
+              }
+          }
+
+          // Run the clock engine every 1 second (1000 milliseconds)
+          setInterval(updateClockAndStatus, 1000);
+          updateClockAndStatus(); // Run instantly on load
+              
           </script>
         </div>
     </div>
     
-    <div class="chart-footer">Note: All times are in (CT - Central Time Zone).</div>
+    <div class="chart-footer">
+        <div id="live-clock">Time: --:--:-- -- Central Time</div>
+        <div>Note: All times are in (CT - Central Time Zone).</div>
+    </div>
     
 </body>
 </html>
