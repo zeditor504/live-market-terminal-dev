@@ -19,11 +19,17 @@
         
         /* Unified Header Layout */
         .header { 
-            text-align: center; margin-bottom: 20px; width: 85vw; 
+            text-align: center; margin-bottom: 20px; width: 95vw; /* Widened to 95vw */
             position: relative; display: flex; justify-content: center; align-items: center; 
         }
-        
-        .header h1 { margin: 0; font-size: 2rem; font-weight: 600; color: #FFFFFF; letter-spacing: -0.5px; }
+
+        .iframe-container {
+            width: 95vw; /* Widened to 95vw */
+            height: 80vh; /* Made slightly taller */
+            border-radius: 12px; /* Tighter corners look better on data tables */
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(255, 255, 255, 0.05); background-color: #FFFFFF;
+        }
         
         /* Navigation Button Styling */
         .nav-btn {
@@ -53,7 +59,7 @@
     </div>
 
     <div class="iframe-container">
-        <iframe src="https://docs.google.com/spreadsheets/d/e/2PACX-1vSMXRNvl_MWdY7TDj8bXruKqlFyoulqEc33XWZ1q5tY9rn2rdLSB6F-VqufSwtHup2eLvZwcBA3fX-j/pubhtml?gid=0&amp;single=true&amp;widget=true&amp;headers=false&amp;chrome=false"></iframe>
+        <iframe src="https://docs.google.com/spreadsheets/d/e/2PACX-1vSMXRNvl_MWdY7TDj8bXruKqlFyoulqEc33XWZ1q5tY9rn2rdLSB6F-VqufSwtHup2eLvZwcBA3fX-j/pubhtml?gid=0&amp;single=true&amp;widget=false&amp;headers=false&amp;chrome=false"></iframe>
         </div>
 
 </body>
