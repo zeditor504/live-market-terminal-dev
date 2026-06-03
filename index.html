@@ -101,19 +101,20 @@
     </div>
 
     <div class="toggle-container">
-        <button class="toggle-btn time-btn" onclick="setTime('interval', '1', this)">1m</button>
-        <button class="toggle-btn time-btn" onclick="setTime('interval', '2', this)">2m</button>
-        <button class="toggle-btn time-btn" onclick="setTime('interval', '3', this)">3m</button>
-        <button class="toggle-btn time-btn" onclick="setTime('interval', '5', this)">5m</button>
-        <button class="toggle-btn time-btn" onclick="setTime('interval', '15', this)">15m</button>
-        <button class="toggle-btn time-btn" onclick="setTime('interval', '60', this)">1H</button>
-        <button class="toggle-btn time-btn" onclick="setTime('interval', '240', this)">4H</button>
+        <button class="toggle-btn time-btn" title="Interval: 1-minute data points (Provides granular intraday context)" onclick="setTime('interval', '1', this)">1m</button>
+        <button class="toggle-btn time-btn" title="Interval: 2-minute data points (Provides granular intraday context)" onclick="setTime('interval', '2', this)">2m</button>
+        <button class="toggle-btn time-btn" title="Interval: 3-minute data points (Provides granular intraday context)" onclick="setTime('interval', '3', this)">3m</button>
+        <button class="toggle-btn time-btn" title="Interval: 5-minute data points (Provides short-term trading context)" onclick="setTime('interval', '5', this)">5m</button>
+        <button class="toggle-btn time-btn" title="Interval: 15-minute data points (Provides short-term swing context)" onclick="setTime('interval', '15', this)">15m</button>
         
-        <button class="toggle-btn time-btn" onclick="setTime('range', '1D', this)">24H</button>
-        <button class="toggle-btn time-btn" onclick="setTime('range', '5D', this)">Week</button>
-        <button class="toggle-btn time-btn" onclick="setTime('range', '1M', this)">Month</button>
-        <button class="toggle-btn time-btn active" onclick="setTime('range', 'YTD', this)">YTD</button>
-        <button class="toggle-btn time-btn" onclick="setTime('range', 'ALL', this)">Max</button>
+        <button class="toggle-btn time-btn" title="Interval: 1-Hour data points (Pulls weeks of history to fill screen)" onclick="setTime('interval', '60', this)">1H</button>
+        <button class="toggle-btn time-btn" title="Interval: 4-Hour data points (Pulls months of history to fill screen)" onclick="setTime('interval', '240', this)">4H</button>
+        
+        <button class="toggle-btn time-btn" title="Range: Auto-fits exactly the last 24 Hours of trading to your screen" onclick="setTime('range', '1D', this)">24H</button>
+        <button class="toggle-btn time-btn" title="Range: Auto-fits exactly the last Week of trading to your screen" onclick="setTime('range', '5D', this)">Week</button>
+        <button class="toggle-btn time-btn" title="Range: Auto-fits exactly the last Month of trading to your screen" onclick="setTime('range', '1M', this)">Month</button>
+        <button class="toggle-btn time-btn active" title="Range: Auto-fits Year-To-Date trading to your screen" onclick="setTime('range', 'YTD', this)">YTD</button>
+        <button class="toggle-btn time-btn" title="Range: Auto-fits all available history to your screen" onclick="setTime('range', 'ALL', this)">Max</button>
     </div>
 
     <div class="legend-container">
