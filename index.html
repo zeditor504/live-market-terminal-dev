@@ -21,12 +21,10 @@
         .header h1 { margin: 0; font-size: 2.5rem; font-weight: 600; letter-spacing: -0.5px; }
         .header p { margin: 5px 0 0 0; color: #8E8E93; font-size: 1.1rem; }
 
-        /* Sleek, swipeable carousels for the buttons */
         .toggle-container {
             display: flex; gap: 5px; background-color: #1C1C1E; 
             padding: 4px; border-radius: 100px; margin-bottom: 12px;
             width: 85vw; overflow-x: auto; white-space: nowrap;
-            /* Hides the ugly scrollbar but keeps swipe functionality on mobile */
             -ms-overflow-style: none; scrollbar-width: none;  
         }
         .toggle-container::-webkit-scrollbar { display: none; }
@@ -35,7 +33,7 @@
             background: transparent; border: none; color: #8E8E93;
             font-family: 'Inter Tight', sans-serif; font-weight: 600; font-size: 0.9rem;
             padding: 8px 16px; border-radius: 100px; cursor: pointer; 
-            transition: all 0.2s ease; flex-shrink: 0; /* Prevents squishing */
+            transition: all 0.2s ease; flex-shrink: 0; 
         }
         .toggle-btn:hover { color: #FFFFFF; }
         .toggle-btn.active {
@@ -53,6 +51,12 @@
             width: 85vw; height: 55vh; border-radius: 20px; 
             overflow: hidden; box-shadow: 0 10px 30px rgba(255, 255, 255, 0.05); 
         }
+        
+        /* NEW: Timezone Note Styling */
+        .chart-footer {
+            width: 85vw; text-align: right; margin-top: 8px;
+            font-size: 0.85rem; color: #8E8E93; font-weight: 400;
+        }
     </style>
 </head>
 <body>
@@ -68,23 +72,24 @@
         <button class="toggle-btn symbol-btn" onclick="setSymbol('NASDAQ:AAPL', 'AAPL', this)">AAPL</button>
         <button class="toggle-btn symbol-btn" onclick="setSymbol('NASDAQ:MSFT', 'MSFT', this)">MSFT</button>
         <button class="toggle-btn symbol-btn" onclick="setSymbol('NASDAQ:AMZN', 'AMZN', this)">AMZN</button>
-        <button class="toggle-btn symbol-btn" onclick="setSymbol('NASDAQ:GOOGL', 'GOOGL', this)">GOOGL</button>
+        <button class="toggle-btn symbol-btn" onclick="setSymbol('NASDAQ:GOOG', 'GOOG', this)">GOOG</button>
         <button class="toggle-btn symbol-btn" onclick="setSymbol('NASDAQ:META', 'META', this)">META</button>
     </div>
 
     <div class="toggle-container">
-        <button class="toggle-btn time-btn" onclick="setTime('1D', '1', this)">1m</button>
-        <button class="toggle-btn time-btn" onclick="setTime('1D', '2', this)">2m</button>
-        <button class="toggle-btn time-btn" onclick="setTime('1D', '3', this)">3m</button>
-        <button class="toggle-btn time-btn" onclick="setTime('1D', '5', this)">5m</button>
-        <button class="toggle-btn time-btn" onclick="setTime('5D', '15', this)">15m</button>
-        <button class="toggle-btn time-btn" onclick="setTime('1M', '60', this)">1H</button>
-        <button class="toggle-btn time-btn" onclick="setTime('3M', '240', this)">4H</button>
-        <button class="toggle-btn time-btn" onclick="setTime('1D', '5', this)">24H</button>
-        <button class="toggle-btn time-btn" onclick="setTime('5D', '15', this)">Week</button>
-        <button class="toggle-btn time-btn" onclick="setTime('1M', '60', this)">Month</button>
-        <button class="toggle-btn time-btn active" onclick="setTime('YTD', 'D', this)">YTD</button>
-        <button class="toggle-btn time-btn" onclick="setTime('ALL', 'W', this)">Max</button>
+        <button class="toggle-btn time-btn" onclick="setTime('interval', '1', this)">1m</button>
+        <button class="toggle-btn time-btn" onclick="setTime('interval', '2', this)">2m</button>
+        <button class="toggle-btn time-btn" onclick="setTime('interval', '3', this)">3m</button>
+        <button class="toggle-btn time-btn" onclick="setTime('interval', '5', this)">5m</button>
+        <button class="toggle-btn time-btn" onclick="setTime('interval', '15', this)">15m</button>
+        <button class="toggle-btn time-btn" onclick="setTime('interval', '60', this)">1H</button>
+        <button class="toggle-btn time-btn" onclick="setTime('interval', '240', this)">4H</button>
+        
+        <button class="toggle-btn time-btn" onclick="setTime('range', '1D', this)">24H</button>
+        <button class="toggle-btn time-btn" onclick="setTime('range', '5D', this)">Week</button>
+        <button class="toggle-btn time-btn" onclick="setTime('range', '1M', this)">Month</button>
+        <button class="toggle-btn time-btn active" onclick="setTime('range', 'YTD', this)">YTD</button>
+        <button class="toggle-btn time-btn" onclick="setTime('range', 'ALL', this)">Max</button>
     </div>
 
     <div class="legend-container">
@@ -100,12 +105,10 @@
           
           <script type="text/javascript">
           
-          // State Variables: Remembers the current selection!
           let currentSymbol = "NASDAQ:TSLA";
-          let currentRange = "YTD";
-          let currentInterval = "D";
+          let currentTimeMode = "range"; 
+          let currentTimeValue = "YTD";
 
-          // Triggers when a stock is clicked
           function setSymbol(symbolCode, symbolName, clickedButton) {
               if (clickedButton) {
                   let buttons = document.querySelectorAll('.symbol-btn');
@@ -117,27 +120,24 @@
               renderChart();
           }
 
-          // Triggers when a time is clicked
-          function setTime(rangeValue, intervalValue, clickedButton) {
+          function setTime(mode, value, clickedButton) {
               if (clickedButton) {
                   let buttons = document.querySelectorAll('.time-btn');
                   buttons.forEach(btn => btn.classList.remove('active'));
                   clickedButton.classList.add('active');
               }
-              currentRange = rangeValue;
-              currentInterval = intervalValue;
+              currentTimeMode = mode;
+              currentTimeValue = value;
               renderChart();
           }
 
-          // Destroys the old chart and draws the new one
           function renderChart() {
               document.getElementById('tradingview_chart').innerHTML = '';
-              new TradingView.widget({
+              
+              let widgetConfig = {
                   "autosize": true,
                   "symbol": currentSymbol,   
-                  "range": currentRange,     
-                  "interval": currentInterval, 
-                  "timezone": "Etc/UTC",
+                  "timezone": "America/Chicago", /* UPDATED: Forces CT */
                   "theme": "dark",
                   "style": "3", 
                   "locale": "en",
@@ -147,14 +147,25 @@
                   "hide_legend": true, 
                   "container_id": "tradingview_chart",
                   "studies": ["Volume@tv-basicstudies"]
-              });
+              };
+
+              /* THE FIX: Conditionally pass interval OR range to prevent autoscaling overlap */
+              if (currentTimeMode === "range") {
+                  widgetConfig.range = currentTimeValue;
+              } else {
+                  widgetConfig.interval = currentTimeValue;
+              }
+
+              new TradingView.widget(widgetConfig);
           }
 
-          // Boot up the first chart
           renderChart();
           
           </script>
         </div>
     </div>
+    
+    <div class="chart-footer">Note: All times are in (CT - Central Time Zone).</div>
+    
 </body>
 </html>
