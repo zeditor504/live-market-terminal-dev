@@ -181,7 +181,10 @@
                         let tr = document.createElement('tr');
                         let tdDate = document.createElement('td');
                         tdDate.innerText = dateVal;
-                        tdDate.style.paddingTop = '20px';
+                        
+                        // Enforce pristine vertical centering while providing tracking headroom via line-height
+                        tdDate.style.lineHeight = '2.5rem';
+                        
                         tr.appendChild(tdDate);
                         
                         // Fill remaining columns with empty grid cells
