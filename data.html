@@ -42,15 +42,20 @@
             flex-grow: 1; 
             width: 100vw; 
             background-color: #000000;
-            overflow: hidden; 
+            overflow: hidden; /* Critical: Crops anything that bleeds past the container bounds */
             position: relative;
         }
         
-        /* Applies negative spatial margins to obscure native iframe UI and borders */
+        /* Applies negative spatial margins to obscure native iframe UI, borders, and scrollbars */
         iframe { 
-            position: absolute; top: -5px; left: -5px; right: -5px; bottom: -5px;
-            width: calc(100% + 10px); height: calc(100% + 10px); 
-            border: none; display: block; 
+            position: absolute; 
+            top: -5px; 
+            left: -5px; 
+            /* Extended bounds to physically push the Google Sheets scrollbars completely off-screen */
+            width: calc(100% + 25px); 
+            height: calc(100% + 25px); 
+            border: none; 
+            display: block; 
         }
     </style>
 </head>
@@ -63,7 +68,7 @@
 
     <div class="iframe-container">
         <iframe src="https://docs.google.com/spreadsheets/d/e/2PACX-1vSMXRNvl_MWdY7TDj8bXruKqlFyoulqEc33XWZ1q5tY9rn2rdLSB6F-VqufSwtHup2eLvZwcBA3fX-j/pubhtml?gid=0&amp;single=true&amp;widget=false&amp;headers=false&amp;chrome=false"></iframe>
-        </div>
+    </div>
 
 </body>
 </html>
