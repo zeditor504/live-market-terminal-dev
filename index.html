@@ -19,7 +19,7 @@
         }
         
         /* Container width restrictions */
-        .header, .toggle-container, .legend-container, .chart-wrapper, .chart-footer, .stats-container {
+        .header, .toggle-container, .legend-container, .chart-wrapper, .chart-footer {
             width: 95vw; max-width: 1400px;
         }
 
@@ -93,20 +93,8 @@
         #market-countdown { text-align: center; color: #FFFFFF; font-weight: 600; font-variant-numeric: tabular-nums; }
         .chart-footer > div:last-child { text-align: right; color: #FFFFFF; font-weight: 600; } /* Bold & White Note */
 
-        /* Quantitative statistics grid */
-        .stats-container { margin-top: 40px; margin-bottom: 40px; text-align: left; }
-        .stats-container h2 {
-            font-size: 1.5rem; font-weight: 600; margin-bottom: 20px; 
-            border-bottom: 1px solid #2C2C2E; padding-bottom: 15px; color: #FFFFFF;
-        }
-        .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 30px 20px; }
-        .stat-box { display: flex; flex-direction: column; gap: 6px; }
-        .stat-label { font-size: 0.9rem; color: #FFFFFF; font-weight: 600; }
-        .stat-value { font-size: 0.95rem; color: #FFFFFF; font-weight: 400; font-variant-numeric: tabular-nums; }
-
         /* Mobile responsive adjustments */
         @media (max-width: 800px) {
-            .stats-grid { grid-template-columns: repeat(2, 1fr); }
             .chart-wrapper { height: 50vh; }
             .chart-footer { flex-direction: column; align-items: center; gap: 8px; }
             .chart-footer > div { text-align: center !important; }
@@ -166,27 +154,6 @@
         <div>Note: All times are in (CT - Central Time Zone).</div>
     </div>
 
-    <div class="stats-container">
-        <h2 id="stats-title"><span id="stats-title-ticker">TSLA</span> Key Statistics</h2>
-        
-        <div class="stats-grid">
-            <div class="stat-box"><span class="stat-label">Market cap</span><span class="stat-value" id="stat-mcap">---</span></div>
-            <div class="stat-box"><span class="stat-label">Price-Earnings ratio</span><span class="stat-value" id="stat-pe">---</span></div>
-            <div class="stat-box"><span class="stat-label">Dividend yield</span><span class="stat-value" id="stat-div">---</span></div>
-            <div class="stat-box"><span class="stat-label">Average volume</span><span class="stat-value" id="stat-avgvol">---</span></div>
-            
-            <div class="stat-box"><span class="stat-label">High today</span><span class="stat-value" id="stat-high">---</span></div>
-            <div class="stat-box"><span class="stat-label">Low today</span><span class="stat-value" id="stat-low">---</span></div>
-            <div class="stat-box"><span class="stat-label">Open price</span><span class="stat-value" id="stat-open">---</span></div>
-            <div class="stat-box"><span class="stat-label">Volume</span><span class="stat-value" id="stat-vol">---</span></div>
-            
-            <div class="stat-box"><span class="stat-label">52 Week high</span><span class="stat-value" id="stat-52high">---</span></div>
-            <div class="stat-box"><span class="stat-label">52 Week low</span><span class="stat-value" id="stat-52low">---</span></div>
-            <div class="stat-box"><span class="stat-label">Previous Close</span><span class="stat-value" id="stat-prevclose">---</span></div>
-            <div class="stat-box"><span class="stat-label">EPS (TTM)</span><span class="stat-value" id="stat-eps">---</span></div>
-        </div>
-    </div>
-
     <script type="text/javascript">
         /* Global Application State & Local Storage Persistence */
         let currentSymbolCode = localStorage.getItem('savedSymbolCode') || "NASDAQ:TSLA";
@@ -194,10 +161,6 @@
         let currentBrandColor = localStorage.getItem('savedBrandColor') || "#E31937";
         let currentTimeMode = localStorage.getItem('savedTimeMode') || "range"; 
         let currentTimeValue = localStorage.getItem('savedTimeValue') || "YTD";
-        
-        let currentFetchedPrice = "---";
-        let currentFetchId = 0; 
-        const statsCache = {}; 
 
         /* DOM Element Cache */
         const DOM = {
@@ -205,22 +168,7 @@
             countdown: document.getElementById('market-countdown'),
             status: document.getElementById('market-status'),
             title: document.getElementById('stock-title'),
-            statsTicker: document.getElementById('stats-title-ticker'),
-            chart: document.getElementById('tradingview_chart'),
-            stats: {
-                mcap: document.getElementById('stat-mcap'),
-                pe: document.getElementById('stat-pe'),
-                div: document.getElementById('stat-div'),
-                avgvol: document.getElementById('stat-avgvol'),
-                high: document.getElementById('stat-high'),
-                low: document.getElementById('stat-low'),
-                open: document.getElementById('stat-open'),
-                vol: document.getElementById('stat-vol'),
-                high52: document.getElementById('stat-52high'),
-                low52: document.getElementById('stat-52low'),
-                prevclose: document.getElementById('stat-prevclose'),
-                eps: document.getElementById('stat-eps')
-            }
+            chart: document.getElementById('tradingview_chart')
         };
 
         /* Event Handler: Ticker Selection */
@@ -243,7 +191,6 @@
             DOM.title.style.textShadow = `0px 0px 12.5px ${brandColor}66`;
             
             renderChart();
-            fetchKeyStats(currentTicker);
         }
 
         /* Event Handler: Temporal Constraint Selection */
@@ -280,7 +227,6 @@
             
             DOM.title.innerText = currentTicker;
             renderChart();
-            fetchKeyStats(currentTicker);
         }
 
         /* UI Constructor: TradingView API Integration */
@@ -304,149 +250,6 @@
             else widgetConfig.interval = currentTimeValue;
 
             new TradingView.widget(widgetConfig);
-        }
-
-        /* Utility: Numerical string formatting */
-        function formatLargeNumber(num) {
-            if (num === null || num === undefined || num === "N/A" || num === "---" || num === "") return '---';
-            if (typeof num === 'string' && /[MBT]/i.test(num)) return num.trim();
-            
-            const parsed = parseFloat(String(num).replace(/,/g, ''));
-            if (isNaN(parsed)) return '---';
-            
-            if (parsed >= 1e12) return (parsed / 1e12).toFixed(2) + 'T';
-            if (parsed >= 1e9) return (parsed / 1e9).toFixed(2) + 'B';
-            if (parsed >= 1e6) return (parsed / 1e6).toFixed(2) + 'M';
-            return parsed.toLocaleString();
-        }
-        
-        /* Utility: Currency string formatting */
-        function formatCurrency(num) {
-            if (num === null || num === undefined || num === "N/A" || num === "---" || num === "") return '---';
-            const parsed = parseFloat(String(num).replace(/,/g, '').replace(/\$/g, ''));
-            if (isNaN(parsed)) return '---';
-            if (parsed < 0) return '-$' + Math.abs(parsed).toFixed(2);
-            return '$' + parsed.toFixed(2);
-        }
-
-        /* External API Integration Engine (Lightning Fast Promise.any Race) */
-        async function fetchKeyStats(ticker) {
-            const fetchId = ++currentFetchId; 
-            DOM.statsTicker.innerText = ticker;
-            
-            const now = Date.now();
-            if (statsCache[ticker] && (now - statsCache[ticker].timestamp < 60000)) {
-                if (currentFetchId === fetchId) injectStatsData(statsCache[ticker].data);
-                return;
-            }
-
-            if (currentFetchId === fetchId) {
-                Object.values(DOM.stats).forEach(el => el.innerText = "---");
-                currentFetchedPrice = "---";
-                updateClockAndStatus(); 
-            }
-            
-            const yahooUrl = `https://query2.finance.yahoo.com/v7/finance/quote?symbols=${ticker}`;
-            const proxies = [
-                `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(yahooUrl)}`,
-                `https://api.allorigins.win/raw?url=${encodeURIComponent(yahooUrl)}`,
-                `https://corsproxy.io/?${encodeURIComponent(yahooUrl)}`
-            ];
-
-            let dataPayload = null;
-
-            try {
-                // RACE CONDITION: Promise.any returns the FIRST successful resolved promise.
-                // This slashes load times from ~5s down to ~300ms.
-                const q = await Promise.any(proxies.map(async proxy => {
-                    const res = await fetch(proxy, { cache: 'no-store' });
-                    if (!res.ok) throw new Error('Proxy failed');
-                    const json = await res.json();
-                    if (!json.quoteResponse?.result?.[0]) throw new Error('Bad payload');
-                    return json.quoteResponse.result[0];
-                }));
-
-                if (currentFetchId !== fetchId) return;
-
-                dataPayload = {
-                    price: q.regularMarketPrice || q.regularMarketPreviousClose,
-                    mcap: q.marketCap,
-                    pe: q.trailingPE || q.forwardPE,
-                    div: q.dividendYield !== undefined && q.dividendYield !== null ? (parseFloat(q.dividendYield) * 100).toFixed(2) + '%' : '---',
-                    avgvol: q.averageDailyVolume3Month || q.averageDailyVolume10Day,
-                    high: q.regularMarketDayHigh,
-                    low: q.regularMarketDayLow,
-                    open: q.regularMarketOpen,
-                    vol: q.regularMarketVolume,
-                    high52: q.fiftyTwoWeekHigh,
-                    low52: q.fiftyTwoWeekLow,
-                    prevclose: q.regularMarketPreviousClose,
-                    eps: q.epsTrailingTwelveMonths || q.epsForward
-                };
-
-            } catch (e) {
-                // Fallback to CNBC if Yahoo entirely fails across all proxies
-                if (currentFetchId !== fetchId) return;
-                
-                const cnbcUrl = `https://quote.cnbc.com/quote-html-webservice/restQuote/symbolType/symbol?symbols=${ticker}&requestMethod=itv&noform=1&fund=1&exthrs=1&output=json`;
-                try {
-                    const res = await fetch(`https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(cnbcUrl)}`);
-                    const json = await res.json();
-                    const q = json?.FormattedQuoteResult?.FormattedQuote?.[0] || json?.QuickQuoteResult?.QuickQuote?.[0];
-                    if (q) {
-                        dataPayload = {
-                            price: q.last || q.previous_day_closing,
-                            mcap: q.mktcap || q.market_cap || '---', 
-                            pe: q.pe || '---',
-                            div: q.dividendyield && q.dividendyield !== "N/A" ? String(q.dividendyield).replace(/%/g, '') + '%' : '---',
-                            avgvol: q.avgvol || q.VMA10VOL || '---',
-                            high: q.high,
-                            low: q.low,
-                            open: q.open,
-                            vol: q.volume || q.curmktvol,
-                            high52: q.yrhiprice || q.yhigh,
-                            low52: q.yrloprice || q.ylow,
-                            prevclose: q.previous_day_closing || q.PREV_CLS,
-                            eps: q.eps || q.EPS
-                        };
-                    }
-                } catch(err) {}
-            }
-
-            if (currentFetchId !== fetchId) return;
-
-            if (dataPayload) {
-                statsCache[ticker] = { timestamp: now, data: dataPayload };
-                injectStatsData(dataPayload);
-            }
-        }
-
-        /* DOM Interfacer: Applies fetched data to Document Object Model */
-        function injectStatsData(data) {
-            currentFetchedPrice = data.price ? formatCurrency(data.price) : "---";
-            DOM.stats.mcap.innerText = formatLargeNumber(data.mcap);
-            
-            let peStr = '---';
-            if (data.pe && data.pe !== '---' && data.pe !== 'N/A') {
-                const peParsed = parseFloat(String(data.pe).replace(/,/g, ''));
-                if (!isNaN(peParsed)) peStr = peParsed.toFixed(2);
-            }
-            DOM.stats.pe.innerText = peStr;
-            
-            DOM.stats.div.innerText = data.div;
-            DOM.stats.avgvol.innerText = formatLargeNumber(data.avgvol);
-            
-            DOM.stats.high.innerText = formatCurrency(data.high);
-            DOM.stats.low.innerText = formatCurrency(data.low);
-            DOM.stats.open.innerText = formatCurrency(data.open);
-            DOM.stats.vol.innerText = formatLargeNumber(data.vol);
-            
-            DOM.stats.high52.innerText = formatCurrency(data.high52);
-            DOM.stats.low52.innerText = formatCurrency(data.low52);
-            DOM.stats.prevclose.innerText = formatCurrency(data.prevclose);
-            DOM.stats.eps.innerText = formatCurrency(data.eps);
-
-            updateClockAndStatus();
         }
 
         /* Chronological State Engine & Countdown Logic */
@@ -476,7 +279,7 @@
             if (isMarketOpen) {
                 DOM.status.innerHTML = `Live Market Tracking <span style="color: #76B900; font-weight: 600;">(Market Open)</span>`;
             } else {
-                DOM.status.innerHTML = `Market Closed <span style="color: #BFBFBF; font-weight: 600;">(At Close: ${currentFetchedPrice})</span>`;
+                DOM.status.innerHTML = `Market Closed <span style="color: #BFBFBF; font-weight: 600;">(Market Closed)</span>`;
             }
 
             // --- DYNAMIC COUNTDOWN ENGINE ---
