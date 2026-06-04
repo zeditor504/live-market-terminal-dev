@@ -160,7 +160,6 @@
 
     <div class="stats-container">
         <h2 id="stats-title"><span id="stats-title-ticker">TSLA</span> Key Statistics</h2>
-        
         <div class="stats-grid">
             <div class="stat-box"><span class="stat-label">Market cap</span><span class="stat-value" id="stat-mcap">---</span></div>
             <div class="stat-box"><span class="stat-label">Price-Earnings ratio</span><span class="stat-value" id="stat-pe">---</span></div>
@@ -188,10 +187,13 @@
         let currentTimeValue = "YTD";
         let currentFetchedPrice = "---";
         
+        /* State Lock to completely prevent race conditions on rapid toggling */
+        let currentFetchId = 0; 
+        
         /* Network Response Cache */
         const statsCache = {}; 
 
-        /* DOM Element Cache (Updated for 12 items) */
+        /* DOM Element Cache */
         const DOM = {
             clock: document.getElementById('live-clock'),
             status: document.getElementById('market-status'),
@@ -271,12 +273,17 @@
             new TradingView.widget(widgetConfig);
         }
 
-        /* Utility: Numerical string formatting (Upgraded for Multi-Source Engine) */
+        /* Utility: Numerical string formatting (Strips commas perfectly to prevent truncation) */
         function formatLargeNumber(num) {
-            if (!num || num === "N/A" || num === "---") return '-';
-            if (typeof num === 'string' && /[MBT]/.test(num)) return num; // Safely bypass CNBC pre-formatted strings
-            const parsed = parseFloat(num);
-            if (isNaN(parsed)) return '-';
+            if (num === null || num === undefined || num === "N/A" || num === "---" || num === "") return '---';
+            
+            // Bypass pre-formatted string payloads (e.g. "1.23T") gracefully
+            if (typeof num === 'string' && /[MBT]/i.test(num)) return num.trim();
+            
+            // Forcefully strip commas before float parsing so "41,000,000" accurately computes instead of breaking at "41"
+            const parsed = parseFloat(String(num).replace(/,/g, ''));
+            if (isNaN(parsed)) return '---';
+            
             if (parsed >= 1e12) return (parsed / 1e12).toFixed(2) + 'T';
             if (parsed >= 1e9) return (parsed / 1e9).toFixed(2) + 'B';
             if (parsed >= 1e6) return (parsed / 1e6).toFixed(2) + 'M';
@@ -285,29 +292,37 @@
         
         /* Utility: Currency string formatting */
         function formatCurrency(num) {
-            if (!num || num === "N/A" || num === "---") return '-';
-            const parsed = parseFloat(num);
-            if (isNaN(parsed)) return '-';
+            if (num === null || num === undefined || num === "N/A" || num === "---" || num === "") return '---';
+            
+            const parsed = parseFloat(String(num).replace(/,/g, '').replace(/\$/g, ''));
+            if (isNaN(parsed)) return '---';
+            
+            if (parsed < 0) return '-$' + Math.abs(parsed).toFixed(2);
             return '$' + parsed.toFixed(2);
         }
 
-        /* INJECTED: Multi-Source API Integration Engine */
+        /* External API Integration Engine */
         async function fetchKeyStats(ticker) {
+            const fetchId = ++currentFetchId; // Captures unique request instance for background race condition lock
+            
             DOM.statsTicker.innerText = ticker;
             
-            // Serve from memory cache if data is less than 60 seconds old
             const now = Date.now();
             if (statsCache[ticker] && (now - statsCache[ticker].timestamp < 60000)) {
-                injectStatsData(statsCache[ticker].data);
+                if (currentFetchId === fetchId) {
+                    injectStatsData(statsCache[ticker].data);
+                }
                 return;
             }
 
-            // Revert UI to processing state visually while fetching
-            Object.values(DOM.stats).forEach(el => el.innerText = "---");
-            currentFetchedPrice = "---";
-            updateClockAndStatus(); 
+            // Instantly clear UI to prevent old prices bleeding into view while new request is pending
+            if (currentFetchId === fetchId) {
+                Object.values(DOM.stats).forEach(el => el.innerText = "---");
+                currentFetchedPrice = "---";
+                updateClockAndStatus(); 
+            }
             
-            // Fallback Source and Proxy Routing
+            // Tiered Network Architecture (Added redundant endpoints)
             const SOURCES = [
                 { provider: 'yahoo', url: `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${ticker}` },
                 { provider: 'cnbc', url: `https://quote.cnbc.com/quote-html-webservice/restQuote/symbolType/symbol?symbols=${ticker}&requestMethod=itv&noform=1&fund=1&exthrs=1&output=json` }
@@ -323,13 +338,14 @@
 
             for (let source of SOURCES) {
                 for (let proxy of PROXIES) {
+                    if (currentFetchId !== fetchId) return; // Silent discard if user clicked a new stock mid-fetch
+
                     try {
                         const targetUrl = proxy + encodeURIComponent(source.url);
                         const res = await fetch(targetUrl);
                         if (!res.ok) continue;
 
                         let text;
-                        // Handle strict JSON wrapping used by AllOrigins
                         if (proxy.includes('allorigins')) {
                             const jsonRes = await res.json();
                             text = jsonRes.contents;
@@ -345,9 +361,9 @@
                             dataPayload = {
                                 price: q.regularMarketPrice || q.regularMarketPreviousClose,
                                 mcap: q.marketCap,
-                                pe: q.trailingPE ? q.trailingPE.toFixed(2) : '-',
-                                div: q.dividendYield ? (q.dividendYield * 100).toFixed(2) + '%' : '-',
-                                avgvol: q.averageDailyVolume3Month,
+                                pe: q.trailingPE,
+                                div: q.dividendYield !== undefined && q.dividendYield !== null ? (parseFloat(q.dividendYield) * 100).toFixed(2) + '%' : '---',
+                                avgvol: q.averageDailyVolume3Month || q.averageDailyVolume10Day,
                                 high: q.regularMarketDayHigh,
                                 low: q.regularMarketDayLow,
                                 open: q.regularMarketOpen,
@@ -364,20 +380,26 @@
                         if (source.provider === 'cnbc') {
                             const q = data?.FormattedQuoteResult?.FormattedQuote?.[0] || data?.QuickQuoteResult?.QuickQuote?.[0];
                             if (q) {
+                                // Fixes double percentage bug mathematically by wiping existing % signs
+                                let cDiv = '---';
+                                if (q.dividendyield && q.dividendyield !== "N/A") {
+                                    cDiv = String(q.dividendyield).replace(/%/g, '') + '%';
+                                }
+
                                 dataPayload = {
                                     price: q.last || q.previous_day_closing,
-                                    mcap: q.mktcap || '-', 
-                                    pe: q.pe || '-',
-                                    div: q.dividendyield && q.dividendyield !== "N/A" ? q.dividendyield + '%' : '-',
-                                    avgvol: q.avgvol || q.VMA10VOL,
+                                    mcap: q.mktcap || q.market_cap || q.MKTCAP || '---', 
+                                    pe: q.pe || '---',
+                                    div: cDiv,
+                                    avgvol: q.avgvol || q.VMA10VOL || q.averageVolume || '---',
                                     high: q.high,
                                     low: q.low,
                                     open: q.open,
-                                    vol: q.volume,
+                                    vol: q.volume || q.curmktvol,
                                     high52: q.yrhiprice || q.yhigh,
                                     low52: q.yrloprice || q.ylow,
                                     prevclose: q.previous_day_closing || q.PREV_CLS,
-                                    eps: q.eps
+                                    eps: q.eps || q.EPS
                                 };
                                 break;
                             }
@@ -389,22 +411,31 @@
                 if (dataPayload) break;
             }
 
-            // Write successful fetch to TTL Memory Cache
+            // Final lock check before executing DOM injections to block straggler network requests
+            if (currentFetchId !== fetchId) return;
+
             if (dataPayload) {
                 statsCache[ticker] = { timestamp: now, data: dataPayload };
                 injectStatsData(dataPayload);
             } else {
-                console.error("Data retrieval execution failed: All proxies exhausted.");
+                console.error("Data retrieval execution failed: All proxy tiers exhausted.");
             }
         }
 
         /* DOM Interfacer: Applies fetched data to Document Object Model */
         function injectStatsData(data) {
-            // Update the top live tracker
             currentFetchedPrice = data.price ? formatCurrency(data.price) : "---";
 
             DOM.stats.mcap.innerText = formatLargeNumber(data.mcap);
-            DOM.stats.pe.innerText = data.pe;
+            
+            // Decimal formatting for P/E
+            let peStr = '---';
+            if (data.pe && data.pe !== '---' && data.pe !== 'N/A') {
+                const peParsed = parseFloat(String(data.pe).replace(/,/g, ''));
+                if (!isNaN(peParsed)) peStr = peParsed.toFixed(2);
+            }
+            DOM.stats.pe.innerText = peStr;
+            
             DOM.stats.div.innerText = data.div;
             DOM.stats.avgvol.innerText = formatLargeNumber(data.avgvol);
             
@@ -418,7 +449,6 @@
             DOM.stats.prevclose.innerText = formatCurrency(data.prevclose);
             DOM.stats.eps.innerText = formatCurrency(data.eps);
 
-            // Re-render header layout
             updateClockAndStatus();
         }
 
@@ -449,7 +479,7 @@
             if (isMarketOpen) {
                 DOM.status.innerHTML = `Live Market Tracking <span style="color: #76B900; font-weight: 600;">(Market Open)</span>`;
             } else {
-                DOM.status.innerHTML = `Market Closed <span style="color: #BFBFBF; font-weight: 600;">(At Close: ${currentFetchedPrice})</span>`;
+                DOM.status.innerHTML = `Market Closed <span style="color: #E31937; font-weight: 600;">(At Close: ${currentFetchedPrice})</span>`;
             }
         }
 
