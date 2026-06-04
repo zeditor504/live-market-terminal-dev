@@ -72,9 +72,8 @@
 
         th:last-child, td:last-child { border-right: none; }
         
-        /* Bold weightings for labels */
-        th:first-child { font-weight: 700; }
-        td:nth-child(2) { font-weight: 700; }
+        /* Bold weighting for Stock Symbol labels */
+        td:first-child { font-weight: 700; }
 
         /* Conditional formatting custom classes */
         .bg-pos { background-color: #c8e6c9 !important; color: #2e7d32 !important; font-weight: 600; }
@@ -103,7 +102,6 @@
         <table>
             <thead>
                 <tr>
-                    <th>Date</th>
                     <th>Stock Symbol</th>
                     <th>Closing Price</th>
                     <th colspan="2">Change over Yesterday</th>
@@ -171,18 +169,18 @@
                     // Render completely blank operational buffer rows to retain gridlines
                     if (!dateVal && !symbol) {
                         let tr = document.createElement('tr');
-                        for(let j=0; j<10; j++) tr.appendChild(document.createElement('td'));
+                        for(let j=0; j<9; j++) tr.appendChild(document.createElement('td'));
                         tbody.appendChild(tr);
                         continue;
                     }
 
-                    // Render chronological Date separator rows (Fully merged and centered banner)
+                    // Render chronological Date separator rows (Fully merged and centered banner across 9 columns)
                     if (dateVal && !symbol) {
                         let tr = document.createElement('tr');
                         let tdDate = document.createElement('td');
                         
                         tdDate.innerText = dateVal;
-                        tdDate.colSpan = "10"; // Merge across all 10 table columns
+                        tdDate.colSpan = "9"; // Merged across the 9 remaining columns
                         
                         // Enhanced typography and structural styling
                         tdDate.style.fontWeight = '700';
@@ -209,12 +207,7 @@
                     
                     let tr = document.createElement('tr');
                     
-                    // Empty spacer cell under the Date header
-                    let tdDateSpacer = document.createElement('td');
-                    tdDateSpacer.innerText = "";
-                    tr.appendChild(tdDateSpacer); 
-                    
-                    // Column 1: Stock Symbol Colors
+                    // Column 0: Stock Symbol Colors (Now the very first column)
                     let tdSym = document.createElement('td');
                     tdSym.innerText = symbol;
                     tdSym.style.color = BRAND_COLORS[symbol] || '#FFFFFF';
@@ -224,7 +217,7 @@
                     tdPrice.innerText = price;
                     tr.appendChild(tdPrice);
                     
-                    // Column 3 & 4: Daily Changes (Green/Red conditionals)
+                    // Column 2 & 3: Daily Changes (Green/Red conditionals)
                     let tdPct = document.createElement('td');
                     tdPct.innerText = chgPct;
                     if (chgPct.includes('↑') || chgPct.includes('+')) tdPct.className = 'bg-pos';
@@ -249,7 +242,7 @@
                     tdCost.innerText = cost;
                     tr.appendChild(tdCost);
                     
-                    // Column 8: Expected Profit (Conditional Gold coloring for > $1000)
+                    // Column 7: Expected Profit (Conditional Gold coloring for > $1000)
                     let tdProf = document.createElement('td');
                     tdProf.innerText = profit;
                     
@@ -259,7 +252,7 @@
                     }
                     tr.appendChild(tdProf);
                     
-                    // Column 9: Upside Potential Dynamic Heatmap Engine
+                    // Column 8: Upside Potential Dynamic Heatmap Engine
                     let tdUp = document.createElement('td');
                     tdUp.innerText = upside;
                     let num = parseFloat(upside.replace('%',''));
