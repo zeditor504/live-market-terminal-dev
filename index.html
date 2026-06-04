@@ -45,4 +45,290 @@
             display: flex; gap: 5px; background-color: #1C1C1E; 
             padding: 4px; border-radius: 100px; margin-bottom: 12px;
             overflow-x: auto; white-space: nowrap;
-            justify-content: center; /* PERFECT
+            justify-content: center; /* PERFECTLY CENTERS BUTTONS */
+            -ms-overflow-style: none; scrollbar-width: none;  
+        }
+        .toggle-container::-webkit-scrollbar { display: none; }
+        
+        /* Interactive button states */
+        .toggle-btn {
+            background: transparent; border: none; color: #8E8E93;
+            font-family: 'Inter Tight', sans-serif; font-weight: 600; font-size: 0.9rem;
+            padding: 8px 16px; border-radius: 100px; cursor: pointer; 
+            transition: all 0.2s ease; flex-shrink: 0; 
+        }
+        
+        .time-btn:hover { color: #FFFFFF; }
+        .time-btn.active {
+            background-color: #3A3A3C; color: #FFFFFF; box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+
+        .symbol-btn:hover { color: var(--brand-color); background-color: rgba(255, 255, 255, 0.05); }
+        .symbol-btn.active {
+            background-color: var(--brand-color); color: var(--text-color); 
+            box-shadow: 0 0 12.5px var(--brand-color);
+        }
+
+        /* Chart legend styling */
+        .legend-container { display: flex; gap: 20px; margin-bottom: 12px; justify-content: flex-start; }
+        .legend-item { display: flex; align-items: center; gap: 8px; }
+        .color-square { width: 12px; height: 12px; border-radius: 3px; }
+        .legend-text { font-size: 0.9rem; font-weight: 400; color: #FFFFFF; }
+
+        /* API widget container bounds */
+        .chart-wrapper { 
+            height: 60vh; border-radius: 20px; overflow: hidden; 
+            box-shadow: 0 10px 30px rgba(255, 255, 255, 0.05); 
+        }
+        
+        /* Footer alignment and tabular numeric layout */
+        .chart-footer {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-top: 10px; font-size: 0.85rem; color: #8E8E93; font-weight: 400;
+        }
+        .chart-footer > div {
+            flex: 1; /* Forcing equal width to perfectly center the countdown */
+        }
+        #live-clock { text-align: left; color: #FFFFFF; font-weight: 600; font-variant-numeric: tabular-nums; }
+        #market-countdown { text-align: center; color: #FFFFFF; font-weight: 600; font-variant-numeric: tabular-nums; }
+        .chart-footer > div:last-child { text-align: right; color: #FFFFFF; font-weight: 600; } /* Bold & White Note */
+
+        /* Mobile responsive adjustments */
+        @media (max-width: 800px) {
+            .chart-wrapper { height: 50vh; }
+            .chart-footer { flex-direction: column; align-items: center; gap: 8px; }
+            .chart-footer > div { text-align: center !important; }
+        }
+    </style>
+</head>
+<body>
+    
+    <div class="header">
+        <h1 id="stock-title" style="color: #E31937; text-shadow: 0px 0px 12.5px #E3193766;">TSLA</h1>
+        <p id="market-status">Live Market Tracking & Volume</p>
+        <a href="data.html" class="database-link">View At Close History ▶</a>
+    </div>
+
+    <div class="toggle-container">
+        <button class="toggle-btn symbol-btn" style="--brand-color: #E31937; --text-color: #FFFFFF;" onclick="setSymbol('NASDAQ:TSLA', 'TSLA', '#E31937', this)">TSLA</button>
+        <button class="toggle-btn symbol-btn" style="--brand-color: #76B900; --text-color: #000000;" onclick="setSymbol('NASDAQ:NVDA', 'NVDA', '#76B900', this)">NVDA</button>
+        <button class="toggle-btn symbol-btn" style="--brand-color: #BFBFBF; --text-color: #000000;" onclick="setSymbol('NASDAQ:AAPL', 'AAPL', '#BFBFBF', this)">AAPL</button>
+        <button class="toggle-btn symbol-btn" style="--brand-color: #00A4EF; --text-color: #000000;" onclick="setSymbol('NASDAQ:MSFT', 'MSFT', '#00A4EF', this)">MSFT</button>
+        <button class="toggle-btn symbol-btn" style="--brand-color: #FF9900; --text-color: #000000;" onclick="setSymbol('NASDAQ:AMZN', 'AMZN', '#FF9900', this)">AMZN</button>
+        <button class="toggle-btn symbol-btn" style="--brand-color: #4285F4; --text-color: #FFFFFF;" onclick="setSymbol('NASDAQ:GOOG', 'GOOG', '#4285F4', this)">GOOG</button>
+        <button class="toggle-btn symbol-btn" style="--brand-color: #0668E1; --text-color: #FFFFFF;" onclick="setSymbol('NASDAQ:META', 'META', '#0668E1', this)">META</button>
+    </div>
+
+    <div class="toggle-container">
+        <button class="toggle-btn time-btn" title="Interval: 1m data points (Granular intraday context)" onclick="setTime('interval', '1', this)">1m</button>
+        <button class="toggle-btn time-btn" title="Interval: 2m data points (Granular intraday context)" onclick="setTime('interval', '2', this)">2m</button>
+        <button class="toggle-btn time-btn" title="Interval: 3m data points (Granular intraday context)" onclick="setTime('interval', '3', this)">3m</button>
+        <button class="toggle-btn time-btn" title="Interval: 5m data points (Short-term trading context)" onclick="setTime('interval', '5', this)">5m</button>
+        <button class="toggle-btn time-btn" title="Interval: 15m data points (Short-term swing context)" onclick="setTime('interval', '15', this)">15m</button>
+        <button class="toggle-btn time-btn" title="Interval: 1-Hour data points (Pulls weeks of history)" onclick="setTime('interval', '60', this)">1H</button>
+        <button class="toggle-btn time-btn" title="Interval: 4-Hour data points (Pulls months of history)" onclick="setTime('interval', '240', this)">4H</button>
+        
+        <button class="toggle-btn time-btn" title="Range: Auto-fits exactly the last 24 Hours of trading" onclick="setTime('range', '1D', this)">24H</button>
+        <button class="toggle-btn time-btn" title="Range: Auto-fits exactly the last Week of trading" onclick="setTime('range', '5D', this)">Week</button>
+        <button class="toggle-btn time-btn" title="Range: Auto-fits exactly the last Month of trading" onclick="setTime('range', '1M', this)">Month</button>
+        <button class="toggle-btn time-btn" title="Range: Auto-fits Year-To-Date trading" onclick="setTime('range', 'YTD', this)">YTD</button>
+        <button class="toggle-btn time-btn" title="Range: Auto-fits all available history" onclick="setTime('range', 'ALL', this)">Max</button>
+    </div>
+
+    <div class="legend-container">
+        <div class="legend-item"><div class="color-square" style="background-color: #2863fc;"></div><span class="legend-text">Price Trend</span></div>
+        <div class="legend-item"><div class="color-square" style="background-color: #30998b;"></div><span class="legend-text">Demand</span></div>
+        <div class="legend-item"><div class="color-square" style="background-color: #e95448;"></div><span class="legend-text">Supply</span></div>
+    </div>
+
+    <div class="chart-wrapper">
+        <div class="tradingview-widget-container" style="height:100%;width:100%">
+          <div id="tradingview_chart" style="height:100%;width:100%"></div>
+          <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
+        </div>
+    </div>
+    
+    <div class="chart-footer">
+        <div id="live-clock">Time: --:--:-- -- Central Time</div>
+        <div id="market-countdown">Calculating...</div>
+        <div>Note: All times are in (CT - Central Time Zone).</div>
+    </div>
+
+    <script type="text/javascript">
+        /* Global Application State & Local Storage Persistence */
+        let currentSymbolCode = localStorage.getItem('savedSymbolCode') || "NASDAQ:TSLA";
+        let currentTicker = localStorage.getItem('savedTicker') || "TSLA";
+        let currentBrandColor = localStorage.getItem('savedBrandColor') || "#E31937";
+        let currentTimeMode = localStorage.getItem('savedTimeMode') || "range"; 
+        let currentTimeValue = localStorage.getItem('savedTimeValue') || "YTD";
+
+        /* DOM Element Cache */
+        const DOM = {
+            clock: document.getElementById('live-clock'),
+            countdown: document.getElementById('market-countdown'),
+            status: document.getElementById('market-status'),
+            title: document.getElementById('stock-title'),
+            chart: document.getElementById('tradingview_chart')
+        };
+
+        /* Event Handler: Ticker Selection */
+        function setSymbol(symbolCode, symbolName, brandColor, clickedButton) {
+            if (clickedButton) {
+                document.querySelectorAll('.symbol-btn').forEach(btn => btn.classList.remove('active'));
+                clickedButton.classList.add('active');
+            }
+            currentSymbolCode = symbolCode;
+            currentTicker = symbolName;
+            currentBrandColor = brandColor;
+            
+            // Save settings locally to preserve state on page refresh
+            localStorage.setItem('savedSymbolCode', symbolCode);
+            localStorage.setItem('savedTicker', symbolName);
+            localStorage.setItem('savedBrandColor', brandColor);
+            
+            DOM.title.innerText = symbolName; 
+            DOM.title.style.color = brandColor;
+            DOM.title.style.textShadow = `0px 0px 12.5px ${brandColor}66`;
+            
+            renderChart();
+        }
+
+        /* Event Handler: Temporal Constraint Selection */
+        function setTime(mode, value, clickedButton) {
+            if (clickedButton) {
+                document.querySelectorAll('.time-btn').forEach(btn => btn.classList.remove('active'));
+                clickedButton.classList.add('active');
+            }
+            currentTimeMode = mode;
+            currentTimeValue = value;
+            
+            localStorage.setItem('savedTimeMode', mode);
+            localStorage.setItem('savedTimeValue', value);
+            
+            renderChart();
+        }
+
+        /* Boot-up App Initialization */
+        function initializeTerminal() {
+            // Restore active state to dynamically saved Ticker button
+            document.querySelectorAll('.symbol-btn').forEach(btn => {
+                if (btn.innerText === currentTicker) {
+                    btn.classList.add('active');
+                    DOM.title.style.color = currentBrandColor;
+                    DOM.title.style.textShadow = `0px 0px 12.5px ${currentBrandColor}66`;
+                }
+            });
+            // Restore active state to dynamically saved Time button
+            document.querySelectorAll('.time-btn').forEach(btn => {
+                if (btn.getAttribute('onclick').includes(`'${currentTimeValue}'`)) {
+                    btn.classList.add('active');
+                }
+            });
+            
+            DOM.title.innerText = currentTicker;
+            renderChart();
+        }
+
+        /* UI Constructor: TradingView API Integration */
+        function renderChart() {
+            DOM.chart.innerHTML = '';
+            const widgetConfig = {
+                "autosize": true,
+                "symbol": currentSymbolCode,   
+                "timezone": "America/Chicago", 
+                "theme": "dark",
+                "style": "3", 
+                "locale": "en",
+                "enable_publishing": false,
+                "allow_symbol_change": false, 
+                "hide_top_toolbar": true, 
+                "hide_legend": true, 
+                "container_id": "tradingview_chart"
+            };
+
+            if (currentTimeMode === "range") widgetConfig.range = currentTimeValue;
+            else widgetConfig.interval = currentTimeValue;
+
+            new TradingView.widget(widgetConfig);
+        }
+
+        /* Chronological State Engine & Countdown Logic */
+        function updateClockAndStatus() {
+            const now = new Date();
+            const timeOptions = { timeZone: 'America/Chicago', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true };
+            DOM.clock.innerText = `Time: ${now.toLocaleTimeString('en-US', timeOptions)} Central Time`;
+
+            // Operational parameters based on Central Time validation
+            const ctString = now.toLocaleString("en-US", { timeZone: "America/Chicago" });
+            const ctDate = new Date(ctString);
+            const day = ctDate.getDay(); 
+            const hour = ctDate.getHours(); 
+            const minute = ctDate.getMinutes(); 
+            
+            const timeInMinutes = (hour * 60) + minute;
+            const marketOpen = (8 * 60) + 30; // 08:30 CT
+            const marketClose = 15 * 60;      // 15:00 CT
+            
+            let isMarketOpen = false;
+            
+            // Temporal bounds validation 
+            if (day !== 0 && day !== 6 && timeInMinutes >= marketOpen && timeInMinutes < marketClose) {
+                isMarketOpen = true;
+            }
+            
+            if (isMarketOpen) {
+                DOM.status.innerHTML = `Live Market Tracking <span style="color: #76B900; font-weight: 600;">(Market Open)</span>`;
+            } else {
+                DOM.status.innerHTML = `<span style="color: #BFBFBF; font-weight: 600;">Market Closed</span>`;
+            }
+
+            // --- DYNAMIC COUNTDOWN ENGINE ---
+            let targetDayOffset = 0;
+            let targetMinutes = 0;
+            let isClosing = false;
+            
+            if (day === 0) { // Sunday
+                targetDayOffset = 1;
+                targetMinutes = marketOpen;
+            } else if (day === 6) { // Saturday
+                targetDayOffset = 2;
+                targetMinutes = marketOpen;
+            } else { // Weekday
+                if (timeInMinutes < marketOpen) {
+                    targetDayOffset = 0; 
+                    targetMinutes = marketOpen;
+                } else if (timeInMinutes >= marketOpen && timeInMinutes < marketClose) {
+                    targetDayOffset = 0; 
+                    targetMinutes = marketClose;
+                    isClosing = true;
+                } else { // After close on a weekday
+                    targetDayOffset = (day === 5) ? 3 : 1; // +3 days if Friday, +1 day otherwise
+                    targetMinutes = marketOpen;
+                }
+            }
+            
+            let diffMinutes = 0;
+            if (targetDayOffset === 0) {
+                diffMinutes = targetMinutes - timeInMinutes;
+            } else {
+                diffMinutes = (24 * 60 - timeInMinutes) + ((targetDayOffset - 1) * 24 * 60) + targetMinutes;
+            }
+            
+            const diffHrs = Math.floor(diffMinutes / 60);
+            const diffMins = diffMinutes % 60;
+            
+            if (isClosing) {
+                DOM.countdown.innerText = `Market closes in ${diffHrs}h ${diffMins}m`;
+            } else {
+                DOM.countdown.innerText = `Market opens in ${diffHrs}h ${diffMins}m`;
+            }
+        }
+
+        /* Primary Initialization Sequence */
+        setInterval(updateClockAndStatus, 1000);
+        initializeTerminal();
+        updateClockAndStatus(); 
+        
+    </script>
+</body>
+</html>
