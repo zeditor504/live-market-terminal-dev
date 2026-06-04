@@ -10,6 +10,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;600&display=swap" rel="stylesheet">
     
     <style>
+        /* Base document properties */
         body { 
             margin: 0; padding: 20px 0; background-color: #000000; 
             font-family: 'Inter Tight', sans-serif; color: #FFFFFF;
@@ -17,18 +18,20 @@
             align-items: center; overflow-x: hidden;
         }
         
+        /* Container width restrictions */
         .header, .toggle-container, .legend-container, .chart-wrapper, .chart-footer, .stats-container {
             width: 95vw; max-width: 1400px;
         }
 
+        /* Header layout and typography */
         .header { text-align: center; margin-bottom: 15px; position: relative; }
-        
         .header h1 { 
             margin: 0; font-size: 2.5rem; font-weight: 600; letter-spacing: -0.5px; 
             transition: color 0.4s ease, text-shadow 0.4s ease; 
         }
         .header p { margin: 5px 0 0 0; color: #8E8E93; font-size: 1.1rem; }
 
+        /* Navigation routing button */
         .database-link {
             display: inline-block; margin-top: 15px; padding: 8px 20px;
             background-color: #1C1C1E; color: #8E8E93; border-radius: 100px;
@@ -37,6 +40,7 @@
         }
         .database-link:hover { color: #FFFFFF; background-color: #3A3A3C; }
 
+        /* Toggle bar containers */
         .toggle-container {
             display: flex; gap: 5px; background-color: #1C1C1E; 
             padding: 4px; border-radius: 100px; margin-bottom: 12px;
@@ -45,6 +49,7 @@
         }
         .toggle-container::-webkit-scrollbar { display: none; }
         
+        /* Interactive button states */
         .toggle-btn {
             background: transparent; border: none; color: #8E8E93;
             font-family: 'Inter Tight', sans-serif; font-weight: 600; font-size: 0.9rem;
@@ -63,23 +68,26 @@
             box-shadow: 0 0 12.5px var(--brand-color);
         }
 
+        /* Chart legend styling */
         .legend-container { display: flex; gap: 20px; margin-bottom: 12px; justify-content: flex-start; }
         .legend-item { display: flex; align-items: center; gap: 8px; }
         .color-square { width: 12px; height: 12px; border-radius: 3px; }
         .legend-text { font-size: 0.9rem; font-weight: 400; color: #FFFFFF; }
 
+        /* API widget container bounds */
         .chart-wrapper { 
             height: 60vh; border-radius: 20px; overflow: hidden; 
             box-shadow: 0 10px 30px rgba(255, 255, 255, 0.05); 
         }
         
+        /* Footer alignment and tabular numeric layout */
         .chart-footer {
             display: flex; justify-content: space-between; align-items: center;
             margin-top: 10px; font-size: 0.85rem; color: #8E8E93; font-weight: 400;
         }
         #live-clock { color: #FFFFFF; font-weight: 600; font-variant-numeric: tabular-nums; }
 
-        /* KEY STATISTICS UI */
+        /* Quantitative statistics grid */
         .stats-container { margin-top: 40px; margin-bottom: 40px; text-align: left; }
         .stats-container h2 {
             font-size: 1.5rem; font-weight: 600; margin-bottom: 20px; 
@@ -90,6 +98,7 @@
         .stat-label { font-size: 0.9rem; color: #FFFFFF; font-weight: 600; }
         .stat-value { font-size: 0.95rem; color: #FFFFFF; font-weight: 400; font-variant-numeric: tabular-nums; }
 
+        /* Mobile responsive adjustments */
         @media (max-width: 800px) {
             .stats-grid { grid-template-columns: repeat(2, 1fr); }
             .chart-wrapper { height: 50vh; }
@@ -102,7 +111,7 @@
     <div class="header">
         <h1 id="stock-title" style="color: #E31937; text-shadow: 0px 0px 12.5px #E3193766;">TSLA</h1>
         <p id="market-status">Live Market Tracking & Volume</p>
-        <a href="data.html" class="database-link">View At Close Database ▶</a>
+        <a href="data.html" class="database-link">View Quantitative Market Ledger ▶</a>
     </div>
 
     <div class="toggle-container">
@@ -168,33 +177,59 @@
     </div>
 
     <script type="text/javascript">
+        /* Global Application State */
         let currentSymbolCode = "NASDAQ:TSLA";
         let currentTicker = "TSLA";
         let currentTimeMode = "range"; 
         let currentTimeValue = "YTD";
         let currentFetchedPrice = "---";
+        
+        /* Network Response Cache */
+        const statsCache = {}; 
 
+        /* DOM Element Cache */
+        const DOM = {
+            clock: document.getElementById('live-clock'),
+            status: document.getElementById('market-status'),
+            title: document.getElementById('stock-title'),
+            statsTicker: document.getElementById('stats-title-ticker'),
+            chart: document.getElementById('tradingview_chart'),
+            stats: {
+                mcap: document.getElementById('stat-mcap'),
+                pe: document.getElementById('stat-pe'),
+                div: document.getElementById('stat-div'),
+                avgvol: document.getElementById('stat-avgvol'),
+                high: document.getElementById('stat-high'),
+                low: document.getElementById('stat-low'),
+                open: document.getElementById('stat-open'),
+                vol: document.getElementById('stat-vol'),
+                high52: document.getElementById('stat-52high'),
+                low52: document.getElementById('stat-52low')
+            }
+        };
+
+        /* Event Handler: Ticker Selection */
         function setSymbol(symbolCode, symbolName, brandColor, clickedButton) {
             if (clickedButton) {
-                let buttons = document.querySelectorAll('.symbol-btn');
+                const buttons = document.querySelectorAll('.symbol-btn');
                 buttons.forEach(btn => btn.classList.remove('active'));
                 clickedButton.classList.add('active');
             }
             currentSymbolCode = symbolCode;
             currentTicker = symbolName;
             
-            let titleObj = document.getElementById('stock-title');
-            titleObj.innerText = symbolName; 
-            titleObj.style.color = brandColor;
-            titleObj.style.textShadow = `0px 0px 12.5px ${brandColor}66`;
+            DOM.title.innerText = symbolName; 
+            DOM.title.style.color = brandColor;
+            DOM.title.style.textShadow = `0px 0px 12.5px ${brandColor}66`;
             
             renderChart();
             fetchKeyStats(currentTicker);
         }
 
+        /* Event Handler: Temporal Constraint Selection */
         function setTime(mode, value, clickedButton) {
             if (clickedButton) {
-                let buttons = document.querySelectorAll('.time-btn');
+                const buttons = document.querySelectorAll('.time-btn');
                 buttons.forEach(btn => btn.classList.remove('active'));
                 clickedButton.classList.add('active');
             }
@@ -203,9 +238,11 @@
             renderChart();
         }
 
+        /* UI Constructor: TradingView API Integration */
         function renderChart() {
-            document.getElementById('tradingview_chart').innerHTML = '';
-            let widgetConfig = {
+            DOM.chart.innerHTML = '';
+            
+            const widgetConfig = {
                 "autosize": true,
                 "symbol": currentSymbolCode,   
                 "timezone": "America/Chicago", 
@@ -228,6 +265,7 @@
             new TradingView.widget(widgetConfig);
         }
 
+        /* Utility: Numerical string formatting */
         function formatLargeNumber(num) {
             if (!num) return '-';
             if (num >= 1e12) return (num / 1e12).toFixed(2) + 'T';
@@ -236,35 +274,43 @@
             return num.toLocaleString();
         }
         
+        /* Utility: Currency string formatting */
         function formatCurrency(num) {
             return num ? '$' + parseFloat(num).toFixed(2) : '-';
         }
 
-        // --- BULLETPROOF MULTI-PROXY FETCH ENGINE ---
+        /* External API Integration Engine */
         async function fetchKeyStats(ticker) {
-            document.getElementById('stats-title-ticker').innerText = ticker;
+            DOM.statsTicker.innerText = ticker;
             
-            const ids = ['mcap', 'pe', 'div', 'avgvol', 'high', 'low', 'open', 'vol', '52high', '52low'];
-            ids.forEach(id => document.getElementById(`stat-${id}`).innerText = "---");
+            // Serve from memory cache if data is less than 60 seconds old
+            const now = Date.now();
+            if (statsCache[ticker] && (now - statsCache[ticker].timestamp < 60000)) {
+                injectStatsData(statsCache[ticker].data);
+                return;
+            }
+
+            // Revert UI to processing state
+            Object.values(DOM.stats).forEach(el => el.innerText = "---");
             currentFetchedPrice = "---";
             updateClockAndStatus(); 
             
-            // We use two robust Yahoo endpoints to ensure we get both core pricing and detailed ratios
             const chartUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?interval=1d`;
             const summaryUrl = `https://query1.finance.yahoo.com/v10/finance/quoteSummary/${ticker}?modules=summaryDetail,price`;
 
             const fetchWithFallback = async (targetUrl) => {
                 const proxies = [
                     `https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}`,
-                    `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(targetUrl)}`
+                    `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(targetUrl)}`,
+                    `https://corsproxy.io/?${encodeURIComponent(targetUrl)}`
                 ];
+                
                 for (let proxy of proxies) {
                     try {
-                        let res = await fetch(proxy);
+                        const res = await fetch(proxy);
                         if (!res.ok) continue;
                         
                         let text;
-                        // AllOrigins wraps the JSON inside a "contents" string
                         if (proxy.includes('allorigins')) {
                             const jsonRes = await res.json();
                             text = jsonRes.contents;
@@ -272,8 +318,8 @@
                             text = await res.text();
                         }
                         
-                        return JSON.parse(text); // Safe parsing
-                    } catch (e) { continue; } // Silently fail over to the next proxy
+                        return JSON.parse(text); 
+                    } catch (e) { continue; } 
                 }
                 return null;
             }
@@ -284,50 +330,67 @@
                     fetchWithFallback(summaryUrl)
                 ]);
 
+                const dataPayload = { price: null, summary: null };
+
                 if (chartData && chartData.chart && chartData.chart.result) {
-                    const meta = chartData.chart.result[0].meta;
-                    currentFetchedPrice = formatCurrency(meta.regularMarketPrice);
-                    document.getElementById('stat-high').innerText = formatCurrency(meta.regularMarketDayHigh);
-                    document.getElementById('stat-low').innerText = formatCurrency(meta.regularMarketDayLow);
-                    document.getElementById('stat-open').innerText = formatCurrency(meta.regularMarketOpen);
-                    document.getElementById('stat-vol').innerText = formatLargeNumber(meta.regularMarketVolume);
+                    dataPayload.price = chartData.chart.result[0].meta;
                 }
-
                 if (summaryData && summaryData.quoteSummary && summaryData.quoteSummary.result) {
-                    const res = summaryData.quoteSummary.result[0];
-                    
-                    // Safely extract deeply nested JSON to prevent crashes
-                    const safeGet = (obj, path) => {
-                        try { return path.split('.').reduce((o, i) => o[i], obj); } catch(e) { return null; }
-                    };
-
-                    const mcap = safeGet(res, 'price.marketCap.raw') || safeGet(res, 'summaryDetail.marketCap.raw');
-                    const pe = safeGet(res, 'summaryDetail.trailingPE.raw');
-                    const div = safeGet(res, 'summaryDetail.dividendYield.raw');
-                    const avgVol = safeGet(res, 'summaryDetail.averageVolume.raw') || safeGet(res, 'price.averageDailyVolume10Day.raw');
-                    const high52 = safeGet(res, 'summaryDetail.fiftyTwoWeekHigh.raw');
-                    const low52 = safeGet(res, 'summaryDetail.fiftyTwoWeekLow.raw');
-
-                    if(mcap) document.getElementById('stat-mcap').innerText = formatLargeNumber(mcap);
-                    if(pe) document.getElementById('stat-pe').innerText = pe.toFixed(2);
-                    if(div) document.getElementById('stat-div').innerText = (div * 100).toFixed(2) + '%';
-                    if(avgVol) document.getElementById('stat-avgvol').innerText = formatLargeNumber(avgVol);
-                    if(high52) document.getElementById('stat-52high').innerText = formatCurrency(high52);
-                    if(low52) document.getElementById('stat-52low').innerText = formatCurrency(low52);
+                    dataPayload.summary = summaryData.quoteSummary.result[0];
                 }
-                
-                updateClockAndStatus();
+
+                // Write successful fetch payload to memory cache
+                statsCache[ticker] = { timestamp: now, data: dataPayload };
+                injectStatsData(dataPayload);
+
             } catch (e) {
-                console.log("Stats fetch error:", e);
+                console.error("Data retrieval execution failed:", e);
             }
         }
 
+        /* DOM Interfacer: Applies fetched data to Document Object Model */
+        function injectStatsData(dataPayload) {
+            const priceMeta = dataPayload.price;
+            const summaryMeta = dataPayload.summary;
+
+            if (priceMeta) {
+                currentFetchedPrice = formatCurrency(priceMeta.regularMarketPrice);
+                DOM.stats.high.innerText = formatCurrency(priceMeta.regularMarketDayHigh);
+                DOM.stats.low.innerText = formatCurrency(priceMeta.regularMarketDayLow);
+                DOM.stats.open.innerText = formatCurrency(priceMeta.regularMarketOpen);
+                DOM.stats.vol.innerText = formatLargeNumber(priceMeta.regularMarketVolume);
+            }
+
+            if (summaryMeta) {
+                const safeGet = (obj, path) => {
+                    try { return path.split('.').reduce((o, i) => o[i], obj); } catch(e) { return null; }
+                };
+
+                const mcap = safeGet(summaryMeta, 'price.marketCap.raw') || safeGet(summaryMeta, 'summaryDetail.marketCap.raw');
+                const pe = safeGet(summaryMeta, 'summaryDetail.trailingPE.raw');
+                const div = safeGet(summaryMeta, 'summaryDetail.dividendYield.raw');
+                const avgVol = safeGet(summaryMeta, 'summaryDetail.averageVolume.raw') || safeGet(summaryMeta, 'price.averageDailyVolume10Day.raw');
+                const high52 = safeGet(summaryMeta, 'summaryDetail.fiftyTwoWeekHigh.raw');
+                const low52 = safeGet(summaryMeta, 'summaryDetail.fiftyTwoWeekLow.raw');
+
+                if(mcap) DOM.stats.mcap.innerText = formatLargeNumber(mcap);
+                if(pe) DOM.stats.pe.innerText = pe.toFixed(2);
+                if(div) DOM.stats.div.innerText = (div * 100).toFixed(2) + '%';
+                if(avgVol) DOM.stats.avgvol.innerText = formatLargeNumber(avgVol);
+                if(high52) DOM.stats.high52.innerText = formatCurrency(high52);
+                if(low52) DOM.stats.low52.innerText = formatCurrency(low52);
+            }
+            
+            updateClockAndStatus();
+        }
+
+        /* Chronological State Engine */
         function updateClockAndStatus() {
             const now = new Date();
             const timeOptions = { timeZone: 'America/Chicago', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true };
-            const timeString = now.toLocaleTimeString('en-US', timeOptions);
-            document.getElementById('live-clock').innerText = `Time: ${timeString} Central Time`;
+            DOM.clock.innerText = `Time: ${now.toLocaleTimeString('en-US', timeOptions)} Central Time`;
 
+            // Operational parameters based on Central Time validation
             const ctString = now.toLocaleString("en-US", { timeZone: "America/Chicago" });
             const ctDate = new Date(ctString);
             const day = ctDate.getDay(); 
@@ -335,24 +398,24 @@
             const minute = ctDate.getMinutes(); 
             
             const timeInMinutes = (hour * 60) + minute;
-            const marketOpen = (8 * 60) + 30; // 8:30 AM CT
-            const marketClose = 15 * 60;      // 3:00 PM CT
+            const marketOpen = (8 * 60) + 30; // 08:30 CT
+            const marketClose = 15 * 60;      // 15:00 CT
             
             let isMarketOpen = false;
-            if (day !== 0 && day !== 6) {
-                if (timeInMinutes >= marketOpen && timeInMinutes < marketClose) {
-                    isMarketOpen = true;
-                }
+            
+            // Temporal bounds validation 
+            if (day !== 0 && day !== 6 && timeInMinutes >= marketOpen && timeInMinutes < marketClose) {
+                isMarketOpen = true;
             }
             
-            const statusEl = document.getElementById('market-status');
             if (isMarketOpen) {
-                statusEl.innerHTML = `Live Market Tracking <span style="color: #76B900; font-weight: 600;">(Market Open)</span>`;
+                DOM.status.innerHTML = `Live Market Tracking <span style="color: #76B900; font-weight: 600;">(Market Open)</span>`;
             } else {
-                statusEl.innerHTML = `Market Closed <span style="color: #E31937; font-weight: 600;">(At Close: ${currentFetchedPrice})</span>`;
+                DOM.status.innerHTML = `Market Closed <span style="color: #E31937; font-weight: 600;">(At Close: ${currentFetchedPrice})</span>`;
             }
         }
 
+        /* Primary Initialization Sequence */
         setInterval(updateClockAndStatus, 1000);
         updateClockAndStatus(); 
         renderChart();
