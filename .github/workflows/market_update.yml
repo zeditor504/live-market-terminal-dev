@@ -1,0 +1,66 @@
+name: Daily At-Close Database Update
+
+on:
+  schedule:
+    # Triggers twice daily: 20:15 UTC (3:15 PM CDT) and 21:15 UTC (3:15 PM CST) Monday-Friday
+    - cron: '15 20,21 * * 1-5'
+  
+  # Keeps the manual "Run workflow" button active for testing
+  workflow_dispatch: 
+
+jobs:
+  # JOB 1: DST Time Controller
+  check-time:
+    runs-on: ubuntu-latest
+    outputs:
+      should_run: ${{ steps.timecheck.outputs.should_run }}
+    steps:
+      - name: Verify Local Central Time
+        id: timecheck
+        run: |
+          # Fetch the current hour in Central Time
+          HOUR=$(TZ='America/Chicago' date +%H)
+          echo "Current Central Time hour is: $HOUR"
+          
+          # If it is 3 PM CT (hour 15) OR if the user manually clicked "Run Workflow", authorize the bot
+          if [ "$HOUR" == "15" ] || [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            echo "It is time to run the market update!"
+            echo "should_run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "Wrong hour due to Daylight Saving Time offsets. Aborting run."
+            echo "should_run=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  # JOB 2: The actual Python Execution (Only runs if Job 1 gives permission)
+  update-sheets:
+    needs: check-time
+    if: needs.check-time.outputs.should_run == 'true'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Generate Credentials File
+        env:
+          GCP_CREDENTIALS: ${{ secrets.GCP_CREDENTIALS }}
+        run: |
+          echo "$GCP_CREDENTIALS" > credentials.json
+
+      - name: Run Market Update Script
+        run: |
+          python bot.py
+          
+      - name: Clean up Credentials
+        if: always()
+        run: rm -f credentials.json
