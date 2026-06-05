@@ -315,13 +315,24 @@
                 diffMinutes = (24 * 60 - timeInMinutes) + ((targetDayOffset - 1) * 24 * 60) + targetMinutes;
             }
             
-            const diffHrs = Math.floor(diffMinutes / 60);
+            // Convert to Days, Hours, Minutes
+            const totalHrs = Math.floor(diffMinutes / 60);
             const diffMins = diffMinutes % 60;
             
+            const diffDays = Math.floor(totalHrs / 24);
+            const remainingHrs = totalHrs % 24;
+            
+            // Construct the display string dynamically
+            let timeString = "";
+            if (diffDays > 0) {
+                timeString += `${diffDays}d `;
+            }
+            timeString += `${remainingHrs}h ${diffMins}m`;
+            
             if (isClosing) {
-                DOM.countdown.innerText = `Market closes in ${diffHrs}h ${diffMins}m`;
+                DOM.countdown.innerText = `Market closes in ${timeString}`;
             } else {
-                DOM.countdown.innerText = `Market opens in ${diffHrs}h ${diffMins}m`;
+                DOM.countdown.innerText = `Market opens in ${timeString}`;
             }
         }
 
@@ -333,4 +344,3 @@
     </script>
 </body>
 </html>
-
