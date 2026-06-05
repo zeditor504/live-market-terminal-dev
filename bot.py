@@ -5,6 +5,75 @@ import pandas as pd
 from datetime import datetime
 import sys
 import traceback
+import concurrent.futures
+
+def fetch_ticker_data(ticker):
+    """
+    Isolated worker function to fetch and process ticker data.
+    Designed to run asynchronously for extreme speed optimization.
+    """
+    try:
+        stock = yf.Ticker(ticker)
+        
+        # EXTREME OPTIMIZATION 1: Disable Yahoo's default dividend adjustments 
+        # that corrupt historical highs, but explicitly retain the split action data.
+        hist = stock.history(period="1y", auto_adjust=False, actions=True)
+        
+        # Drop any corrupted rows
+        hist = hist.dropna(subset=['Close', 'High'])
+        
+        if len(hist) < 2:
+            return None, f"  [!] Warning: Not enough historical data found for {ticker}."
+            
+        # EXTREME OPTIMIZATION 2: Custom Stock Split Retroactive Calculator
+        # This ensures stock splits (like NVDA 10-for-1) mathematically adjust the past history, 
+        # but cash dividends DO NOT shrink the true literal 52-week high.
+        if 'Stock Splits' in hist.columns:
+            splits = hist['Stock Splits'].replace(0.0, 1.0)
+            # Calculate cumulative split ratios strictly for dates preceding the split
+            cum_future_splits = splits.iloc[::-1].cumprod().iloc[::-1].shift(-1).fillna(1.0)
+            hist['True_Close'] = hist['Close'] / cum_future_splits
+            hist['True_High'] = hist['High'] / cum_future_splits
+        else:
+            hist['True_Close'] = hist['Close']
+            hist['True_High'] = hist['High']
+            
+        # EXTREME OPTIMIZATION 3: Strict 2-Decimal Math Isolation
+        # Forces Python to use the exact rounded UI values for downstream calculations
+        current_price = round(float(hist['True_Close'].iloc[-1]), 2)
+        previous_price = round(float(hist['True_Close'].iloc[-2]), 2)
+        
+        high_52w = round(float(hist['True_High'].max()), 2)
+        high_date = hist['True_High'].idxmax().strftime('%m/%d/%Y')
+        
+        # Calculations now perfectly match human manual math down to the penny
+        dollar_change = round(current_price - previous_price, 2)
+        
+        if previous_price > 0:
+            percent_change = (dollar_change / previous_price) * 100
+        else:
+            percent_change = 0.0
+            
+        cost_of_25 = round(current_price * 25, 2)
+        
+        # Expected Profit calculation mirrors exactly how a human calculates it
+        profit_25 = round((high_52w - current_price) * 25, 2)
+        
+        if current_price > 0:
+            upside_raw = (high_52w - current_price) / current_price
+        else:
+            upside_raw = 0.0
+            
+        # Construct the unified row payload
+        row_data = [
+            "", ticker, current_price, percent_change, dollar_change, 
+            high_52w, high_date, cost_of_25, profit_25, upside_raw
+        ]
+        
+        return row_data, None
+        
+    except Exception as e:
+        return None, f"  [X] Data processing exception encountered for {ticker}: {e}"
 
 def main():
     try:
@@ -21,45 +90,24 @@ def main():
         tickers = ['TSLA', 'NVDA', 'AAPL', 'MSFT', 'AMZN', 'GOOG', 'META']
         data_rows = []
 
-        # Generate execution timestamp for batch payload identification
-        run_date = datetime.now().strftime('%m/%d/%y')
-        print(f"Fetching live market data for {len(tickers)} tickers. This takes a few seconds...\n")
+        # Generate execution timestamp for batch payload identification (Upgraded to %Y for 4-digit year)
+        run_date = datetime.now().strftime('%m/%d/%Y')
+        print(f"Fetching live market data for {len(tickers)} tickers asynchronously...\n")
 
-        # Execute data extraction sequence with verbose tracing
-        for ticker in tickers:
-            print(f"  -> Pulling data for {ticker}...")
-            try:
-                stock = yf.Ticker(ticker)
-                hist = stock.history(period="1y")
+        # EXTREME OPTIMIZATION 4: Multi-Threaded Asynchronous Extraction
+        # Blasts all API requests simultaneously to slash execution time.
+        with concurrent.futures.ThreadPoolExecutor(max_workers=len(tickers)) as executor:
+            future_to_ticker = {executor.submit(fetch_ticker_data, ticker): ticker for ticker in tickers}
+            
+            for future in concurrent.futures.as_completed(future_to_ticker):
+                ticker = future_to_ticker[future]
+                row_data, error_msg = future.result()
                 
-                if len(hist) < 2:
-                    print(f"  [!] Warning: Not enough historical data found for {ticker}.")
-                    continue
-                
-                # Force explicit float casting to prevent numpy datatype segfaults
-                current_price = float(hist['Close'].iloc[-1])
-                previous_price = float(hist['Close'].iloc[-2])
-                
-                dollar_change = current_price - previous_price
-                percent_change = (dollar_change / previous_price) * 100
-                
-                high_52w = float(hist['High'].max())
-                high_date = hist['High'].idxmax().strftime('%m/%d/%Y')
-                
-                cost_of_25 = current_price * 25
-                profit_25 = (high_52w * 25) - cost_of_25
-                
-                upside_raw = (high_52w - current_price) / current_price
-                
-                data_rows.append([
-                    "", ticker, current_price, percent_change, dollar_change, 
-                    high_52w, high_date, cost_of_25, profit_25, upside_raw
-                ])
-                print(f"  -> {ticker} successfully processed.")
-                
-            except Exception as e:
-                print(f"  [X] Data processing exception encountered for {ticker}: {e}")
-                continue
+                if row_data:
+                    data_rows.append(row_data)
+                    print(f"  -> {ticker} successfully processed.")
+                else:
+                    print(error_msg)
 
         # Check if batch completely failed before processing
         if not data_rows:
@@ -77,9 +125,9 @@ def main():
         # Sort dataset against primary performance metrics in descending sequence
         df = df.sort_values(by='Upside Potential', ascending=False)
 
-        # Defensive formatting functions
+        # Defensive formatting functions (Now utilizing thousands-separators)
         def format_currency(x): 
-            return f"${float(x):.2f}" if pd.notna(x) else "---"
+            return f"${float(x):,.2f}" if pd.notna(x) else "---"
             
         def format_pct(x): 
             return f"{float(x) * 100:.2f}%" if pd.notna(x) else "---"
@@ -87,8 +135,8 @@ def main():
         def format_dollar_change(x):
             if pd.isna(x): return "'$0.00"
             val = float(x)
-            if val > 0: return f"'+${val:.2f}"
-            if val < 0: return f"'-${abs(val):.2f}"
+            if val > 0: return f"'+${val:,.2f}"
+            if val < 0: return f"'-${abs(val):,.2f}"
             return "'$0.00"
 
         def format_arrow_pct(x):
