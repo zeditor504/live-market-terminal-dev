@@ -105,7 +105,7 @@
     
     <div class="header">
         <h1 id="stock-title" style="color: #E31937; text-shadow: 0px 0px 12.5px #E3193766;">TSLA</h1>
-        <p id="market-status">Live Market Tracking & Volume</p>
+        <p id="market-status">Live Tracking <span style="color: #28C76F; font-weight: 600;">(Market Open)</span></p>
         <a href="data.html" class="database-link">View At Close History ▶</a>
     </div>
 
@@ -128,7 +128,7 @@
         <button class="toggle-btn time-btn" title="Interval: 1-Hour data points (Pulls weeks of history)" onclick="setTime('interval', '60', this)">1H</button>
         <button class="toggle-btn time-btn" title="Interval: 4-Hour data points (Pulls months of history)" onclick="setTime('interval', '240', this)">4H</button>
         
-        <button class="toggle-btn time-btn" title="Range: Auto-fits exactly the last 24 Hours of trading" onclick="setTime('range', '1D', this)">24H</button>
+        <button class="toggle-btn time-btn" title="Range: Auto-fits the current trading day (Today)" onclick="setTime('range', '1D', this)">1D</button>
         <button class="toggle-btn time-btn" title="Range: Auto-fits exactly the last Week of trading" onclick="setTime('range', '5D', this)">Week</button>
         <button class="toggle-btn time-btn" title="Range: Auto-fits exactly the last Month of trading" onclick="setTime('range', '1M', this)">Month</button>
         <button class="toggle-btn time-btn" title="Range: Auto-fits Year-To-Date trading" onclick="setTime('range', 'YTD', this)">YTD</button>
@@ -280,7 +280,7 @@
                 // Applied the rich Emerald Green (#28C76F) here
                 DOM.status.innerHTML = `Live Tracking <span style="color: #28C76F; font-weight: 600;">(Market Open)</span>`;
             } else {
-                DOM.status.innerHTML = `<span style="color: #BFBFBF; font-weight: 600;">Market Closed</span>`;
+                DOM.status.innerHTML = `Live Tracking <span style="color: #BFBFBF; font-weight: 600;">(Market Closed)</span>`;
             }
 
             // --- DYNAMIC COUNTDOWN ENGINE ---
@@ -333,4 +333,3 @@
     </script>
 </body>
 </html>
-
