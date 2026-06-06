@@ -108,9 +108,9 @@
 
         th.sortable:hover .sort-icon { color: #8E8E93; }
 
-        /* Dynamic Class applied via Javascript */
-        th.sortable .sort-icon.active { color: #28C76F; }
-        th.sortable.active-sort { color: #28C76F; }
+        /* Dynamic Class applied via Javascript (Updated to custom blue) */
+        th.sortable .sort-icon.active { color: #3c4bab; }
+        th.sortable.active-sort { color: #3c4bab; }
 
         /* Conditional formatting custom classes */
         .bg-pos { background-color: #c8e6c9 !important; color: #2e7d32 !important; font-weight: 600; }
@@ -312,7 +312,7 @@
                 th.classList.remove('active-sort');
             });
             
-            // Apply Emerald Green active indicators to the selected column
+            // Apply blue active indicators to the selected column
             if (currentSort.column) {
                 const activeIcon = document.getElementById(`sort-${currentSort.column}`);
                 const activeTh = document.getElementById(`th-${currentSort.column}`);
@@ -389,12 +389,12 @@
                     if (r.num_profit > 1000) tdProf.className = 'bg-gold';
                     tr.appendChild(tdProf);
                     
-                    // Complex heat map generation utilizing the pure background float and Emerald Green
+                    // Complex heat map generation utilizing the pure background float and custom Blue (#3c4bab / 60, 75, 171)
                     let tdUp = document.createElement('td');
                     tdUp.innerText = r.upsideStr;
                     if (r.num_upside > 0) {
                         let opacity = Math.min(r.num_upside / 30, 1);
-                        tdUp.style.backgroundColor = `rgba(40, 199, 111, ${opacity})`;
+                        tdUp.style.backgroundColor = `rgba(60, 75, 171, ${opacity})`;
                         tdUp.style.color = '#FFFFFF';
                         tdUp.style.fontWeight = '600';
                     }
