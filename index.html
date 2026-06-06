@@ -154,9 +154,9 @@
     </div>
     
     <div class="chart-footer">
-        <div id="live-clock">Time: --:--:-- -- Central Time</div>
+        <div id="live-clock">Time: --:--:-- --</div>
         <div id="market-countdown">Calculating...</div>
-        <div>Note: All times are in CT - (Central Time Zone).</div>
+        <div>CENTRAL TIME ZONE (CT)</div>
     </div>
 
     <script type="text/javascript">
@@ -261,7 +261,9 @@
         function updateClockAndStatus() {
             const now = new Date();
             const timeOptions = { timeZone: 'America/Chicago', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true };
-            DOM.clock.innerText = `Time: ${now.toLocaleTimeString('en-US', timeOptions)} Central Time`;
+            
+            // Simplified clock: The text "Central Time" is now removed since it is clarified on the right side
+            DOM.clock.innerText = `Time: ${now.toLocaleTimeString('en-US', timeOptions)}`;
 
             // Operational parameters based on Central Time validation
             const ctString = now.toLocaleString("en-US", { timeZone: "America/Chicago" });
