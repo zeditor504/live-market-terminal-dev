@@ -50,6 +50,12 @@
         }
         
         .nav-btn:hover { color: #FFFFFF; background-color: #3A3A3C; }
+
+        /* Dynamic Filtering Status Display */
+        .filter-status {
+            position: absolute; right: 0;
+            color: #FFFFFF; font-weight: 600; font-size: 0.95rem;
+        }
         
         /* Native Data Table Styling */
         .table-container {
@@ -92,7 +98,7 @@
         /* --- Interactive Sorting Headers --- */
         th.sortable {
             cursor: pointer;
-            transition: background-color 0.2s ease;
+            transition: all 0.2s ease;
             user-select: none;
         }
         
@@ -108,9 +114,23 @@
 
         th.sortable:hover .sort-icon { color: #8E8E93; }
 
-        /* Dynamic Class applied via Javascript (Updated to custom blue) */
-        th.sortable .sort-icon.active { color: #3c4bab; }
-        th.sortable.active-sort { color: #3c4bab; }
+        /* Maximum Contrast Active Filter State (Black on White) */
+        th.sortable.active-sort { 
+            background-color: #FFFFFF !important; 
+            color: #000000 !important; 
+            border-bottom: 2px solid #FFFFFF !important; /* Blends border smoothly */
+        }
+        
+        /* Slight off-white hover feedback for the active white column */
+        th.sortable.active-sort:hover {
+            background-color: #F2F2F7 !important;
+        }
+
+        /* Forces active icons to match the black text inversion */
+        th.sortable.active-sort .sort-icon,
+        th.sortable .sort-icon.active { 
+            color: #000000 !important; 
+        }
 
         /* Conditional formatting custom classes */
         .bg-pos { background-color: #c8e6c9 !important; color: #2e7d32 !important; font-weight: 600; }
@@ -131,6 +151,7 @@
     <div class="header">
         <a href="index.html" class="nav-btn">◀ Back to Charts</a>
         <h1>At Close History</h1>
+        <div id="filter-status" class="filter-status">Filtering By: Upside Potential (Default)</div>
     </div>
 
     <div id="loading">Connecting to Database natively...</div>
@@ -161,6 +182,17 @@
         const BRAND_COLORS = {
             'TSLA': '#E31937', 'NVDA': '#76B900', 'AAPL': '#BFBFBF',
             'MSFT': '#00A4EF', 'AMZN': '#FF9900', 'GOOG': '#4285F4', 'META': '#0668E1'
+        };
+        
+        // Dictionary mapping internal IDs to frontend Header Titles
+        const COLUMN_NAMES = {
+            'symbol': 'Stock Symbol',
+            'price': 'Closing Price',
+            'chgPct': 'Change over Yesterday',
+            'high52': '52 Week High',
+            'cost': 'Cost of 25 shares',
+            'profit': 'Expected Profit',
+            'upside': 'Upside Potential'
         };
 
         // --- GLOBAL STATE MANAGEMENT ---
@@ -312,7 +344,7 @@
                 th.classList.remove('active-sort');
             });
             
-            // Apply blue active indicators to the selected column
+            // Apply high-contrast white inversion to the active column
             if (currentSort.column) {
                 const activeIcon = document.getElementById(`sort-${currentSort.column}`);
                 const activeTh = document.getElementById(`th-${currentSort.column}`);
@@ -321,6 +353,14 @@
                     activeIcon.classList.add('active');
                     activeTh.classList.add('active-sort');
                 }
+            }
+            
+            // Dynamically manage the "Filtering By:" text
+            const statusEl = document.getElementById('filter-status');
+            if (currentSort.column === 'upside' && currentSort.direction === 'desc') {
+                statusEl.innerText = "Filtering By: Upside Potential (Default)";
+            } else {
+                statusEl.innerText = `Filtering By: ${COLUMN_NAMES[currentSort.column]}`;
             }
         }
 
