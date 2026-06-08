@@ -51,6 +51,15 @@
         
         .nav-btn:hover { color: #FFFFFF; background-color: #3A3A3C; }
 
+        /* Dynamic Reset Button */
+        .reset-btn {
+            background-color: #1C1C1E; color: #8E8E93; border: 1px solid transparent;
+            padding: 5px 12px; border-radius: 100px; font-weight: 600; font-size: 0.8rem;
+            cursor: pointer; transition: all 0.2s ease; font-family: 'Inter Tight', sans-serif;
+            margin-top: 8px; display: none; /* Hidden by default */
+        }
+        .reset-btn:hover { color: #FFFFFF; background-color: #3A3A3C; }
+        
         /* Dynamic Filtering Status Display */
         .filter-status {
             position: absolute; right: 0;
@@ -161,9 +170,12 @@
     <div class="header">
         <a href="index.html" class="nav-btn">◀ Back to Charts</a>
         <h1>At Close History</h1>
-        <div id="filter-status" class="filter-status">
-            Filtering By: Upside Potential (Default)
-            <span class="filter-direction">High to Low</span>
+        <div style="position: absolute; right: 0; display: flex; flex-direction: column; align-items: flex-end;">
+            <div id="filter-status" class="filter-status" style="position: relative; right: auto;">
+                Filtering By: Upside Potential (Default)
+                <span class="filter-direction">High to Low</span>
+            </div>
+            <button id="reset-btn" class="reset-btn" onclick="resetFilters()">Reset Filters ↺</button>
         </div>
     </div>
 
@@ -380,11 +392,23 @@
                 dirText = currentSort.direction === 'desc' ? 'Top Gainers to Top Losers' : 'Top Losers to Top Gainers';
             }
 
+            // Dynamically show or hide the Reset button
+            const resetBtn = document.getElementById('reset-btn');
             if (currentSort.column === 'upside' && currentSort.direction === 'desc') {
                 statusEl.innerHTML = `Filtering By: Upside Potential (Default)<br><span class="filter-direction">${dirText}</span>`;
+                resetBtn.style.display = 'none';
             } else {
                 statusEl.innerHTML = `Filtering By: ${COLUMN_NAMES[currentSort.column]}<br><span class="filter-direction">${dirText}</span>`;
+                resetBtn.style.display = 'inline-block';
             }
+        }
+
+        // --- RESET FILTERS LOGIC ---
+        function resetFilters() {
+            currentSort = { column: 'upside', direction: 'desc' };
+            applySort();
+            updateSortUI();
+            renderTable();
         }
 
         // --- DOM RENDERING ENGINE ---
