@@ -202,6 +202,7 @@ def main():
         
         intraday_rows = [["Datetime", "Symbol", "Price"]]
         
+        # Runs the intraday downloads concurrently for maximum throughput speed
         with concurrent.futures.ThreadPoolExecutor(max_workers=len(tickers)) as executor:
             future_to_ticker = {executor.submit(fetch_intraday_data, ticker): ticker for ticker in tickers}
             
@@ -216,7 +217,7 @@ def main():
             print("Clearing historical intraday data...")
             intraday_sheet.clear()
             print("Pushing new intraday coordinates...")
-            intraday_sheet.update(values=intraday_rows, range_name='A1')
+            intraday_sheet.update(range_name='A1', values=intraday_rows)
             print("✅ Success! Intraday Database updated.")
         else:
             print("[!] Warning: No intraday data collected.")
