@@ -10,7 +10,6 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;600&display=swap" rel="stylesheet">
     
     <style>
-        /* Base document properties with unified typography optimization */
         body { 
             margin: 0; padding: 20px 0; background-color: #000000; 
             font-family: 'Inter Tight', sans-serif; color: #FFFFFF;
@@ -21,12 +20,10 @@
             -webkit-font-smoothing: antialiased;
         }
         
-        /* Container width restrictions */
         .header, .toggle-container, .legend-container, .chart-wrapper, .chart-footer {
             width: 95vw; max-width: 1400px;
         }
 
-        /* Header layout and typography */
         .header { text-align: center; margin-bottom: 15px; position: relative; }
         .header h1 { 
             margin: 0; font-size: 2.5rem; font-weight: 600; letter-spacing: -0.03em; 
@@ -34,7 +31,6 @@
         }
         .header p { margin: 5px 0 0 0; color: #8E8E93; font-size: 1.1rem; }
 
-        /* Navigation routing button */
         .database-link {
             display: inline-block; margin-top: 15px; padding: 8px 20px;
             background-color: #1C1C1E; color: #8E8E93; border-radius: 100px;
@@ -43,7 +39,6 @@
         }
         .database-link:hover { color: #FFFFFF; background-color: #3A3A3C; }
 
-        /* Toggle bar containers */
         .toggle-container {
             display: flex; gap: 5px; background-color: #1C1C1E; 
             padding: 4px; border-radius: 100px; margin-bottom: 12px;
@@ -53,7 +48,6 @@
         }
         .toggle-container::-webkit-scrollbar { display: none; }
         
-        /* Interactive button states */
         .toggle-btn {
             background: transparent; border: none; color: #8E8E93;
             font-family: 'Inter Tight', sans-serif; font-weight: 600; font-size: 0.9rem;
@@ -72,42 +66,37 @@
             box-shadow: 0 0 12.5px var(--brand-color);
         }
 
-        /* Chart legend styling with static verified token constraints */
         .legend-container { display: flex; gap: 20px; margin-bottom: 12px; justify-content: flex-start; }
         .legend-item { display: flex; align-items: center; gap: 8px; }
         .color-square { width: 12px; height: 12px; border-radius: 3px; }
         .legend-text { font-size: 0.9rem; font-weight: 400; color: #FFFFFF; }
 
-        /* API widget container bounds */
         .chart-wrapper { 
             height: 60vh; border-radius: 20px; overflow: hidden; 
             box-shadow: 0 10px 30px rgba(255, 255, 255, 0.05); 
             position: relative; background-color: #111111;
         }
         
-        /* Canvas absolute binding wrapper */
         #native-canvas-chart {
-            width: 100%; height: 100%; display: none;
+            width: 100%; height: 100%; display: none; cursor: crosshair; touch-action: none;
         }
         #tradingview_container {
             width: 100%; height: 100%; display: block;
         }
         
-        /* Chart overlay notifications */
         .chart-message {
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            color: #8E8E93; font-weight: 600; font-size: 1.1rem; display: none;
+            color: #8E8E93; font-weight: 600; font-size: 1.1rem; display: none; pointer-events: none;
         }
         
-        /* Footer alignment layout */
         .chart-footer {
             display: flex; justify-content: space-between; align-items: center;
             margin-top: 10px; font-size: 0.85rem; color: #8E8E93; font-weight: 400;
         }
         .chart-footer > div { flex: 1; }
         
-        #live-clock { text-align: left; color: #FFFFFF; font-weight: 600; font-variant-numeric: proportional-nums; }
-        #market-countdown { text-align: center; color: #FFFFFF; font-weight: 600; font-variant-numeric: proportional-nums; } 
+        #live-clock { text-align: left; color: #FFFFFF; font-weight: 600; }
+        #market-countdown { text-align: center; color: #FFFFFF; font-weight: 600; } 
         .chart-footer > div:last-child { text-align: right; color: #FFFFFF; font-weight: 600; }
 
         @media (max-width: 800px) {
@@ -136,25 +125,25 @@
     </div>
 
     <div class="toggle-container">
-        <button class="toggle-btn time-btn" title="Interval: 1m data points" onclick="setTime('interval', '1', this)">1m</button>
-        <button class="toggle-btn time-btn" title="Interval: 2m data points" onclick="setTime('interval', '2', this)">2m</button>
-        <button class="toggle-btn time-btn" title="Interval: 3m data points" onclick="setTime('interval', '3', this)">3m</button>
-        <button class="toggle-btn time-btn" title="Interval: 5m data points" onclick="setTime('interval', '5', this)">5m</button>
-        <button class="toggle-btn time-btn" title="Interval: 15m data points" onclick="setTime('interval', '15', this)">15m</button>
-        <button class="toggle-btn time-btn" title="Interval: 1-Hour data points" onclick="setTime('interval', '60', this)">1H</button>
-        <button class="toggle-btn time-btn" title="Interval: 4-Hour data points" onclick="setTime('interval', '240', this)">4H</button>
+        <button class="toggle-btn time-btn" onclick="setTime('interval', '1', this)">1m</button>
+        <button class="toggle-btn time-btn" onclick="setTime('interval', '2', this)">2m</button>
+        <button class="toggle-btn time-btn" onclick="setTime('interval', '3', this)">3m</button>
+        <button class="toggle-btn time-btn" onclick="setTime('interval', '5', this)">5m</button>
+        <button class="toggle-btn time-btn" onclick="setTime('interval', '15', this)">15m</button>
+        <button class="toggle-btn time-btn" onclick="setTime('interval', '60', this)">1H</button>
+        <button class="toggle-btn time-btn" onclick="setTime('interval', '240', this)">4H</button>
         
-        <button class="toggle-btn time-btn" title="Range: Auto-fits the current trading day" onclick="setTime('range', '1D', this)">1D</button>
-        <button class="toggle-btn time-btn" title="Range: Auto-fits exactly the last Week of trading" onclick="setTime('range', '5D', this)">Week</button>
-        <button class="toggle-btn time-btn" title="Range: Auto-fits exactly the last Month of trading" onclick="setTime('range', '1M', this)">Month</button>
-        <button class="toggle-btn time-btn" title="Range: Auto-fits Year-To-Date trading" onclick="setTime('range', 'YTD', this)">YTD</button>
-        <button class="toggle-btn time-btn" title="Range: Auto-fits all available history" onclick="setTime('range', 'ALL', this)">Max</button>
+        <button class="toggle-btn time-btn" onclick="setTime('range', '1D', this)">1D</button>
+        <button class="toggle-btn time-btn" onclick="setTime('range', '5D', this)">Week</button>
+        <button class="toggle-btn time-btn" onclick="setTime('range', '1M', this)">Month</button>
+        <button class="toggle-btn time-btn" onclick="setTime('range', 'YTD', this)">YTD</button>
+        <button class="toggle-btn time-btn" onclick="setTime('range', 'ALL', this)">Max</button>
     </div>
 
     <div class="legend-container">
-        <div class="legend-item"><div class="color-square" style="background-color: #2863fc;"></div><span class="legend-text">Price Trend</span></div>
+        <div class="legend-item"><div class="color-square" style="background-color: #e95448;"></div><span class="legend-text">Price Trend</span></div>
         <div class="legend-item"><div class="color-square" style="background-color: #30998b;"></div><span class="legend-text">Demand</span></div>
-        <div class="legend-item"><div class="color-square" style="background-color: #e95448;"></div><span class="legend-text">Supply</span></div>
+        <div class="legend-item"><div class="color-square" style="background-color: #2863fc;"></div><span class="legend-text">Supply</span></div>
     </div>
 
     <div class="chart-wrapper">
@@ -173,7 +162,6 @@
     </div>
 
     <script type="text/javascript">
-        // Live cloud endpoint for the custom chart matrix
         const INTRADAY_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSMXRNvl_MWdY7TDj8bXruKqlFyoulqEc33XWZ1q5tY9rn2rdLSB6F-VqufSwtHup2eLvZwcBA3fX-j/pub?gid=1782241116&single=true&output=csv";
 
         let currentSymbolCode = localStorage.getItem('savedSymbolCode') || "TSLA";
@@ -181,6 +169,18 @@
         let currentBrandColor = localStorage.getItem('savedBrandColor') || "#E31937";
         let currentTimeMode = localStorage.getItem('savedTimeMode') || "range"; 
         let currentTimeValue = localStorage.getItem('savedTimeValue') || "YTD";
+
+        // Global Chart State Engine for Interactivity
+        const CHART_COLOR = "#e95448"; // Forcing the 3rd key color universally
+        let state = {
+            points: [],
+            scaleX: 1,
+            offsetX: 0,
+            isDragging: false,
+            startX: 0,
+            hoverIndex: -1,
+            hoverPos: null
+        };
 
         const DOM = {
             clock: document.getElementById('live-clock'),
@@ -224,6 +224,9 @@
             localStorage.setItem('savedTimeMode', mode);
             localStorage.setItem('savedTimeValue', value);
             
+            state.scaleX = 1;
+            state.offsetX = 0;
+            
             renderChart();
         }
 
@@ -243,11 +246,11 @@
             });
             
             DOM.title.innerText = currentTicker;
-            window.addEventListener('resize', renderChart);
+            window.addEventListener('resize', () => { if(state.points.length > 0) renderCanvas(); });
+            setupCanvasInteractions();
             renderChart();
         }
 
-        /* Core Dynamic Route Manager */
         function renderChart() {
             const isIntradayMode = (currentTimeMode === 'interval') || (currentTimeMode === 'range' && currentTimeValue === '1D');
             
@@ -284,7 +287,6 @@
             new TradingView.widget(widgetConfig);
         }
 
-        /* High-Performance Canvas Plotter Engine */
         async function fetchAndDrawNativeData() {
             DOM.msgOverlay.innerText = "Connecting to Cloud Database...";
             DOM.msgOverlay.style.display = 'block';
@@ -312,7 +314,8 @@
                 
                 if (coords.length === 0) {
                     DOM.msgOverlay.innerText = `No live data inside tab for ${currentTicker} yet today.`;
-                    clearCanvas();
+                    const ctx = DOM.canvas.getContext('2d');
+                    ctx.clearRect(0, 0, DOM.canvas.width, DOM.canvas.height);
                     return;
                 }
                 
@@ -324,7 +327,8 @@
                 }
                 
                 DOM.msgOverlay.style.display = 'none';
-                drawCanvasGraph(coords);
+                state.points = coords;
+                renderCanvas();
                 
             } catch (err) {
                 console.error(err);
@@ -332,12 +336,104 @@
             }
         }
 
-        function clearCanvas() {
-            const ctx = DOM.canvas.getContext('2d');
-            ctx.clearRect(0, 0, DOM.canvas.width, DOM.canvas.height);
+        /* -----------------------------------------------------------
+           INTERACTIVE CANVAS ENGINE (Pan, Zoom, Hover Tooltips)
+           ----------------------------------------------------------- */
+        function setupCanvasInteractions() {
+            const cvs = DOM.canvas;
+            
+            // Handle Zooming via Scroll Wheel or Touchpad Pinch
+            cvs.addEventListener('wheel', (e) => {
+                e.preventDefault();
+                const zoomSensitivity = 0.001;
+                const zoomFactor = 1 - (e.deltaY * zoomSensitivity);
+                
+                state.scaleX *= zoomFactor;
+                if (state.scaleX < 1) state.scaleX = 1; // Prevent zooming out past 100%
+                if (state.scaleX > 20) state.scaleX = 20; // Cap extreme zoom
+                
+                // Adjust pan to zoom towards mouse position (anchor point)
+                const rect = cvs.getBoundingClientRect();
+                const mouseX = e.clientX - rect.left - 20; // 20 is paddingLeft
+                state.offsetX = mouseX - (mouseX - state.offsetX) * zoomFactor;
+                
+                clampPan();
+                requestAnimationFrame(renderCanvas);
+            });
+
+            // Handle Panning via Click & Drag
+            cvs.addEventListener('mousedown', (e) => {
+                state.isDragging = true;
+                state.startX = e.clientX - state.offsetX;
+            });
+            
+            window.addEventListener('mouseup', () => { state.isDragging = false; });
+            
+            // Handle Hover Crosshairs and Drag Logic
+            cvs.addEventListener('mousemove', (e) => {
+                const rect = cvs.getBoundingClientRect();
+                const mouseX = e.clientX - rect.left;
+                const mouseY = e.clientY - rect.top;
+                
+                if (state.isDragging) {
+                    state.offsetX = e.clientX - state.startX;
+                    clampPan();
+                }
+
+                // Detect closest point for Tooltip
+                if (state.points.length > 0) {
+                    const paddingLeft = 20;
+                    const graphWidth = rect.width - paddingLeft - 65;
+                    const rawGraphX = (mouseX - paddingLeft - state.offsetX) / state.scaleX;
+                    const indexFloat = (rawGraphX / graphWidth) * (state.points.length - 1);
+                    
+                    let closestIdx = Math.round(indexFloat);
+                    if (closestIdx < 0) closestIdx = 0;
+                    if (closestIdx >= state.points.length) closestIdx = state.points.length - 1;
+                    
+                    if (mouseX >= paddingLeft && mouseX <= rect.width - 65) {
+                        state.hoverIndex = closestIdx;
+                        state.hoverPos = { x: mouseX, y: mouseY };
+                    } else {
+                        state.hoverIndex = -1;
+                    }
+                }
+                
+                requestAnimationFrame(renderCanvas);
+            });
+
+            cvs.addEventListener('mouseleave', () => {
+                state.hoverIndex = -1;
+                requestAnimationFrame(renderCanvas);
+            });
+
+            // Mobile Touch Support for Panning
+            cvs.addEventListener('touchstart', (e) => {
+                if (e.touches.length === 1) {
+                    state.isDragging = true;
+                    state.startX = e.touches[0].clientX - state.offsetX;
+                }
+            });
+            cvs.addEventListener('touchmove', (e) => {
+                if (state.isDragging && e.touches.length === 1) {
+                    state.offsetX = e.touches[0].clientX - state.startX;
+                    clampPan();
+                    requestAnimationFrame(renderCanvas);
+                }
+            });
+            cvs.addEventListener('touchend', () => { state.isDragging = false; });
         }
 
-        function drawCanvasGraph(points) {
+        function clampPan() {
+            const maxOffset = 0;
+            const minOffset = -((state.scaleX - 1) * (DOM.canvas.getBoundingClientRect().width - 85));
+            if (state.offsetX > maxOffset) state.offsetX = maxOffset;
+            if (state.offsetX < minOffset) state.offsetX = minOffset;
+        }
+
+        function renderCanvas() {
+            if (state.points.length === 0) return;
+            
             const canvas = DOM.canvas;
             const ctx = canvas.getContext('2d');
             
@@ -358,14 +454,16 @@
             const graphWidth = width - paddingLeft - paddingRight;
             const graphHeight = height - paddingTop - paddingBottom;
             
-            const prices = points.map(p => p.price);
+            const prices = state.points.map(p => p.price);
             const maxPrice = Math.max(...prices) * 1.002;
             const minPrice = Math.min(...prices) * 0.998;
             const priceRange = maxPrice - minPrice;
             
+            // 1. Draw Background
             ctx.fillStyle = '#111111';
             ctx.fillRect(0, 0, width, height);
             
+            // 2. Draw Y-Axis Horizontal Grid (Static, ignores pan/zoom)
             ctx.strokeStyle = '#1C1C1E';
             ctx.lineWidth = 1;
             ctx.fillStyle = '#8E8E93';
@@ -386,57 +484,132 @@
                 ctx.fillText(`$${currentPriceVal.toFixed(2)}`, width - paddingRight + 10, y + 4);
             }
             
+            // 3. Calculate Transformed Coordinates
             let renderCoords = [];
-            for(let i = 0; i < points.length; i++) {
-                const xRatio = i / (points.length - 1);
-                const x = paddingLeft + (xRatio * graphWidth);
+            for(let i = 0; i < state.points.length; i++) {
+                const xRatio = i / (state.points.length - 1);
+                // Apply Scale and Pan Offset to X
+                const x = paddingLeft + (xRatio * graphWidth * state.scaleX) + state.offsetX;
                 
-                const yRatio = (points.length === 1) ? 0.5 : (points[i].price - minPrice) / priceRange;
+                const yRatio = (state.points.length === 1) ? 0.5 : (state.points[i].price - minPrice) / priceRange;
                 const y = paddingTop + (graphHeight * (1 - yRatio));
                 
-                renderCoords.push({ x: x, y: y });
+                renderCoords.push({ x: x, y: y, rawIdx: i });
             }
             
-            // Render Alpha Gradient under the primary line path
+            // Filter coordinates visually inside the bounding box for performance
+            const visibleCoords = renderCoords.filter(pt => pt.x >= paddingLeft - 10 && pt.x <= width - paddingRight + 10);
+            if (visibleCoords.length === 0) return;
+
+            // Clip the drawing area so lines don't bleed into the Y-axis text
+            ctx.save();
             ctx.beginPath();
-            ctx.moveTo(renderCoords[0].x, paddingTop + graphHeight);
-            for(const pt of renderCoords) {
+            ctx.rect(paddingLeft, paddingTop, graphWidth, graphHeight);
+            ctx.clip();
+
+            // 4. Draw Alpha Gradient
+            ctx.beginPath();
+            ctx.moveTo(visibleCoords[0].x, paddingTop + graphHeight);
+            for(const pt of visibleCoords) {
                 ctx.lineTo(pt.x, pt.y);
             }
-            ctx.lineTo(renderCoords[renderCoords.length - 1].x, paddingTop + graphHeight);
+            ctx.lineTo(visibleCoords[visibleCoords.length - 1].x, paddingTop + graphHeight);
             ctx.closePath();
             
             const gradient = ctx.createLinearGradient(0, paddingTop, 0, paddingTop + graphHeight);
-            gradient.addColorStop(0, `${currentBrandColor}33`); 
-            gradient.addColorStop(1, `${currentBrandColor}00`); 
+            gradient.addColorStop(0, `${CHART_COLOR}33`); 
+            gradient.addColorStop(1, `${CHART_COLOR}00`); 
             ctx.fillStyle = gradient;
             ctx.fill();
             
-            // Draw Trendline path
+            // 5. Draw Target Trendline
             ctx.beginPath();
-            ctx.moveTo(renderCoords[0].x, renderCoords[0].y);
-            for(let i = 1; i < renderCoords.length; i++) {
-                ctx.lineTo(renderCoords[i].x, renderCoords[i].y);
+            ctx.moveTo(visibleCoords[0].x, visibleCoords[0].y);
+            for(let i = 1; i < visibleCoords.length; i++) {
+                ctx.lineTo(visibleCoords[i].x, visibleCoords[i].y);
             }
-            ctx.strokeStyle = currentBrandColor;
+            ctx.strokeStyle = CHART_COLOR;
             ctx.lineWidth = 2.5;
             ctx.lineJoin = 'round';
             ctx.lineCap = 'round';
             ctx.stroke();
-            
-            // Draw Proportional-num Timestamps along x-axis boundary
+
+            // 6. Draw Hover Tooltip & Crosshair (if active)
+            if (state.hoverIndex !== -1 && renderCoords[state.hoverIndex]) {
+                const activePt = renderCoords[state.hoverIndex];
+                
+                // Vertical Crosshair Line
+                ctx.beginPath();
+                ctx.moveTo(activePt.x, paddingTop);
+                ctx.lineTo(activePt.x, paddingTop + graphHeight);
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+                ctx.lineWidth = 1;
+                ctx.setLineDash([4, 4]);
+                ctx.stroke();
+                ctx.setLineDash([]);
+                
+                // Active Point Marker
+                ctx.beginPath();
+                ctx.arc(activePt.x, activePt.y, 5, 0, 2 * Math.PI);
+                ctx.fillStyle = CHART_COLOR;
+                ctx.fill();
+                ctx.strokeStyle = '#FFFFFF';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+
+                // Floating Tooltip Box
+                const activeData = state.points[state.hoverIndex];
+                const timeOnly = activeData.timeStr.split(' ')[1] ? activeData.timeStr.split(' ')[1].substring(0, 5) : activeData.timeStr;
+                const priceText = `$${activeData.price.toFixed(2)}`;
+                
+                ctx.font = "600 12px 'Inter Tight'";
+                const textWidth = Math.max(ctx.measureText(priceText).width, ctx.measureText(timeOnly).width) + 20;
+                
+                let boxX = activePt.x + 10;
+                let boxY = activePt.y - 40;
+                
+                // Prevent tooltip from overflowing screen boundaries
+                if (boxX + textWidth > width - paddingRight) boxX = activePt.x - textWidth - 10;
+                if (boxY < paddingTop) boxY = activePt.y + 15;
+
+                ctx.fillStyle = '#1C1C1E';
+                ctx.beginPath();
+                ctx.roundRect(boxX, boxY, textWidth, 40, 6);
+                ctx.fill();
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+                ctx.stroke();
+
+                ctx.fillStyle = '#FFFFFF';
+                ctx.textAlign = 'left';
+                ctx.fillText(priceText, boxX + 10, boxY + 16);
+                ctx.fillStyle = '#8E8E93';
+                ctx.font = "400 11px 'Inter Tight'";
+                ctx.fillText(timeOnly, boxX + 10, boxY + 32);
+            }
+
+            ctx.restore(); // Remove clipping mask
+
+            // 7. Draw Increased Density X-Axis Timestamps (Static Overlay)
             ctx.fillStyle = '#8E8E93';
             ctx.textAlign = 'center';
-            const timestampIndices = [0, Math.floor(points.length / 2), points.length - 1];
+            ctx.font = "600 11px 'Inter Tight'";
             
-            timestampIndices.forEach(idx => {
-                if (idx >= 0 && idx < points.length) {
-                    const pt = renderCoords[idx];
-                    const fullTimeStr = points[idx].timeStr; 
+            // Now renders exactly 7 evenly spaced timestamps
+            const numLabels = 6; 
+            for(let i = 0; i <= numLabels; i++) {
+                // Calculate which raw data index falls at this visual segment based on current pan/zoom
+                const visibleRatio = i / numLabels;
+                const targetScreenX = paddingLeft + (visibleRatio * graphWidth);
+                const targetDataRatio = ((targetScreenX - paddingLeft - state.offsetX) / state.scaleX) / graphWidth;
+                
+                let dataIdx = Math.round(targetDataRatio * (state.points.length - 1));
+                
+                if (dataIdx >= 0 && dataIdx < state.points.length) {
+                    const fullTimeStr = state.points[dataIdx].timeStr; 
                     const timeOnly = fullTimeStr.split(' ')[1] ? fullTimeStr.split(' ')[1].substring(0, 5) : fullTimeStr;
-                    ctx.fillText(timeOnly, pt.x, height - 10);
+                    ctx.fillText(timeOnly, targetScreenX, height - 10);
                 }
-            });
+            }
         }
 
         function updateClockAndStatus() {
