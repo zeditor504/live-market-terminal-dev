@@ -10,12 +10,15 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;600&display=swap" rel="stylesheet">
     
     <style>
-        /* Base document properties */
+        /* Base document properties with unified typography optimization */
         body { 
             margin: 0; padding: 20px 0; background-color: #000000; 
             font-family: 'Inter Tight', sans-serif; color: #FFFFFF;
             min-height: 100vh; display: flex; flex-direction: column;
             align-items: center; overflow-x: hidden;
+            letter-spacing: -0.02em;
+            font-variant-numeric: proportional-nums;
+            -webkit-font-smoothing: antialiased;
         }
         
         /* Container width restrictions */
@@ -26,7 +29,7 @@
         /* Header layout and typography */
         .header { text-align: center; margin-bottom: 15px; position: relative; }
         .header h1 { 
-            margin: 0; font-size: 2.5rem; font-weight: 600; letter-spacing: -0.5px; 
+            margin: 0; font-size: 2.5rem; font-weight: 600; letter-spacing: -0.03em; 
             transition: color 0.4s ease, text-shadow 0.4s ease; 
         }
         .header p { margin: 5px 0 0 0; color: #8E8E93; font-size: 1.1rem; }
@@ -45,7 +48,7 @@
             display: flex; gap: 5px; background-color: #1C1C1E; 
             padding: 4px; border-radius: 100px; margin-bottom: 12px;
             overflow-x: auto; white-space: nowrap;
-            justify-content: center; /* PERFECTLY CENTERS BUTTONS */
+            justify-content: center;
             -ms-overflow-style: none; scrollbar-width: none;  
         }
         .toggle-container::-webkit-scrollbar { display: none; }
@@ -79,26 +82,34 @@
         .chart-wrapper { 
             height: 60vh; border-radius: 20px; overflow: hidden; 
             box-shadow: 0 10px 30px rgba(255, 255, 255, 0.05); 
+            position: relative; background-color: #111111;
         }
         
-        /* Footer alignment and tabular numeric layout */
+        /* Canvas absolute binding wrapper */
+        #native-canvas-chart {
+            width: 100%; height: 100%; display: none;
+        }
+        #tradingview_container {
+            width: 100%; height: 100%; display: block;
+        }
+        
+        /* Chart overlay notifications */
+        .chart-message {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            color: #8E8E93; font-weight: 600; font-size: 1.1rem; display: none;
+        }
+        
+        /* Footer alignment layout */
         .chart-footer {
             display: flex; justify-content: space-between; align-items: center;
             margin-top: 10px; font-size: 0.85rem; color: #8E8E93; font-weight: 400;
         }
-        .chart-footer > div {
-            flex: 1; /* Forcing equal width to perfectly center the countdown */
-        }
+        .chart-footer > div { flex: 1; }
         
-        /* Live clock requires tabular numbers so it doesn't vibrate every second */
-        #live-clock { text-align: left; color: #FFFFFF; font-weight: 600; font-variant-numeric: tabular-nums; }
-        
-        /* Countdown has tabular numbers removed for natural kerning on digits like "11" */
-        #market-countdown { text-align: center; color: #FFFFFF; font-weight: 600; } 
-        
-        .chart-footer > div:last-child { text-align: right; color: #FFFFFF; font-weight: 600; } /* Bold & White Note */
+        #live-clock { text-align: left; color: #FFFFFF; font-weight: 600; font-variant-numeric: proportional-nums; }
+        #market-countdown { text-align: center; color: #FFFFFF; font-weight: 600; font-variant-numeric: proportional-nums; } 
+        .chart-footer > div:last-child { text-align: right; color: #FFFFFF; font-weight: 600; }
 
-        /* Mobile responsive adjustments */
         @media (max-width: 800px) {
             .chart-wrapper { height: 50vh; }
             .chart-footer { flex-direction: column; align-items: center; gap: 8px; }
@@ -125,15 +136,15 @@
     </div>
 
     <div class="toggle-container">
-        <button class="toggle-btn time-btn" title="Interval: 1m data points (Granular intraday context)" onclick="setTime('interval', '1', this)">1m</button>
-        <button class="toggle-btn time-btn" title="Interval: 2m data points (Granular intraday context)" onclick="setTime('interval', '2', this)">2m</button>
-        <button class="toggle-btn time-btn" title="Interval: 3m data points (Granular intraday context)" onclick="setTime('interval', '3', this)">3m</button>
-        <button class="toggle-btn time-btn" title="Interval: 5m data points (Short-term trading context)" onclick="setTime('interval', '5', this)">5m</button>
-        <button class="toggle-btn time-btn" title="Interval: 15m data points (Short-term swing context)" onclick="setTime('interval', '15', this)">15m</button>
-        <button class="toggle-btn time-btn" title="Interval: 1-Hour data points (Pulls weeks of history)" onclick="setTime('interval', '60', this)">1H</button>
-        <button class="toggle-btn time-btn" title="Interval: 4-Hour data points (Pulls months of history)" onclick="setTime('interval', '240', this)">4H</button>
+        <button class="toggle-btn time-btn" title="Interval: 1m data points" onclick="setTime('interval', '1', this)">1m</button>
+        <button class="toggle-btn time-btn" title="Interval: 2m data points" onclick="setTime('interval', '2', this)">2m</button>
+        <button class="toggle-btn time-btn" title="Interval: 3m data points" onclick="setTime('interval', '3', this)">3m</button>
+        <button class="toggle-btn time-btn" title="Interval: 5m data points" onclick="setTime('interval', '5', this)">5m</button>
+        <button class="toggle-btn time-btn" title="Interval: 15m data points" onclick="setTime('interval', '15', this)">15m</button>
+        <button class="toggle-btn time-btn" title="Interval: 1-Hour data points" onclick="setTime('interval', '60', this)">1H</button>
+        <button class="toggle-btn time-btn" title="Interval: 4-Hour data points" onclick="setTime('interval', '240', this)">4H</button>
         
-        <button class="toggle-btn time-btn" title="Range: Auto-fits the current trading day (Today)" onclick="setTime('range', '1D', this)">1D</button>
+        <button class="toggle-btn time-btn" title="Range: Auto-fits the current trading day" onclick="setTime('range', '1D', this)">1D</button>
         <button class="toggle-btn time-btn" title="Range: Auto-fits exactly the last Week of trading" onclick="setTime('range', '5D', this)">Week</button>
         <button class="toggle-btn time-btn" title="Range: Auto-fits exactly the last Month of trading" onclick="setTime('range', '1M', this)">Month</button>
         <button class="toggle-btn time-btn" title="Range: Auto-fits Year-To-Date trading" onclick="setTime('range', 'YTD', this)">YTD</button>
@@ -141,42 +152,48 @@
     </div>
 
     <div class="legend-container">
-        <div class="legend-item"><div class="color-square" style="background-color: #2863fc;"></div><span class="legend-text">Price Trend</span></div>
+        <div class="legend-item"><div class="color-square" id="legend-line-color" style="background-color: #E31937;"></div><span class="legend-text">Price Trend</span></div>
         <div class="legend-item"><div class="color-square" style="background-color: #30998b;"></div><span class="legend-text">Demand</span></div>
         <div class="legend-item"><div class="color-square" style="background-color: #e95448;"></div><span class="legend-text">Supply</span></div>
     </div>
 
     <div class="chart-wrapper">
-        <div class="tradingview-widget-container" style="height:100%;width:100%">
-          <div id="tradingview_chart" style="height:100%;width:100%"></div>
-          <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
+        <div id="chart-msg-overlay" class="chart-message">Connecting to Cloud Database...</div>
+        <canvas id="native-canvas-chart"></canvas>
+        <div id="tradingview_container">
+            <div id="tradingview_chart" style="height:100%;width:100%"></div>
+            <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
         </div>
     </div>
     
     <div class="chart-footer">
         <div id="live-clock">Time: --:--:-- --</div>
         <div id="market-countdown">Calculating...</div>
-        <div>CENTRAL TIME ZONE (CT)</div>
+        <div>Central Time Zone (CT)</div>
     </div>
 
     <script type="text/javascript">
-        /* Global Application State & Local Storage Persistence */
+        // Live cloud endpoint for the custom chart matrix
+        const INTRADAY_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSMXRNvl_MWdY7TDj8bXruKqlFyoulqEc33XWZ1q5tY9rn2rdLSB6F-VqufSwtHup2eLvZwcBA3fX-j/pub?gid=1782241116&single=true&output=csv";
+
         let currentSymbolCode = localStorage.getItem('savedSymbolCode') || "TSLA";
         let currentTicker = localStorage.getItem('savedTicker') || "TSLA";
         let currentBrandColor = localStorage.getItem('savedBrandColor') || "#E31937";
         let currentTimeMode = localStorage.getItem('savedTimeMode') || "range"; 
         let currentTimeValue = localStorage.getItem('savedTimeValue') || "YTD";
 
-        /* DOM Element Cache */
         const DOM = {
             clock: document.getElementById('live-clock'),
             countdown: document.getElementById('market-countdown'),
             status: document.getElementById('market-status'),
             title: document.getElementById('stock-title'),
-            chart: document.getElementById('tradingview_chart')
+            chart: document.getElementById('tradingview_chart'),
+            tvContainer: document.getElementById('tradingview_container'),
+            canvas: document.getElementById('native-canvas-chart'),
+            msgOverlay: document.getElementById('chart-msg-overlay'),
+            legendSquare: document.getElementById('legend-line-color')
         };
 
-        /* Event Handler: Ticker Selection */
         function setSymbol(symbolCode, symbolName, brandColor, clickedButton) {
             if (clickedButton) {
                 document.querySelectorAll('.symbol-btn').forEach(btn => btn.classList.remove('active'));
@@ -186,7 +203,6 @@
             currentTicker = symbolName;
             currentBrandColor = brandColor;
             
-            // Save settings locally to preserve state on page refresh
             localStorage.setItem('savedSymbolCode', symbolCode);
             localStorage.setItem('savedTicker', symbolName);
             localStorage.setItem('savedBrandColor', brandColor);
@@ -194,11 +210,11 @@
             DOM.title.innerText = symbolName; 
             DOM.title.style.color = brandColor;
             DOM.title.style.textShadow = `0px 0px 12.5px ${brandColor}66`;
+            DOM.legendSquare.style.backgroundColor = brandColor;
             
             renderChart();
         }
 
-        /* Event Handler: Temporal Constraint Selection */
         function setTime(mode, value, clickedButton) {
             if (clickedButton) {
                 document.querySelectorAll('.time-btn').forEach(btn => btn.classList.remove('active'));
@@ -213,29 +229,44 @@
             renderChart();
         }
 
-        /* Boot-up App Initialization */
         function initializeTerminal() {
-            // Restore active state to dynamically saved Ticker button
             document.querySelectorAll('.symbol-btn').forEach(btn => {
                 if (btn.innerText === currentTicker) {
                     btn.classList.add('active');
                     DOM.title.style.color = currentBrandColor;
                     DOM.title.style.textShadow = `0px 0px 12.5px ${currentBrandColor}66`;
+                    DOM.legendSquare.style.backgroundColor = currentBrandColor;
                 }
             });
-            // Restore active state to dynamically saved Time button
             document.querySelectorAll('.time-btn').forEach(btn => {
-                if (btn.getAttribute('onclick').includes(`'${currentTimeValue}'`)) {
+                const clickAttr = btn.getAttribute('onclick');
+                if (clickAttr.includes(`'${currentTimeMode}'`) && clickAttr.includes(`'${currentTimeValue}'`)) {
                     btn.classList.add('active');
                 }
             });
             
             DOM.title.innerText = currentTicker;
+            window.addEventListener('resize', renderChart);
             renderChart();
         }
 
-        /* UI Constructor: TradingView API Integration */
+        /* Core Dynamic Route Manager */
         function renderChart() {
+            const isIntradayMode = (currentTimeMode === 'interval') || (currentTimeMode === 'range' && currentTimeValue === '1D');
+            
+            if (isIntradayMode) {
+                DOM.tvContainer.style.display = 'none';
+                DOM.canvas.style.display = 'block';
+                fetchAndDrawNativeData();
+            } else {
+                DOM.msgOverlay.style.display = 'none';
+                DOM.canvas.style.display = 'none';
+                DOM.tvContainer.style.display = 'block';
+                renderTradingViewWidget();
+            }
+        }
+
+        function renderTradingViewWidget() {
             DOM.chart.innerHTML = '';
             const widgetConfig = {
                 "autosize": true,
@@ -250,22 +281,173 @@
                 "hide_legend": true, 
                 "container_id": "tradingview_chart"
             };
-
             if (currentTimeMode === "range") widgetConfig.range = currentTimeValue;
             else widgetConfig.interval = currentTimeValue;
 
             new TradingView.widget(widgetConfig);
         }
 
-        /* Chronological State Engine & Countdown Logic */
+        /* High-Performance Canvas Plotter Engine */
+        async function fetchAndDrawNativeData() {
+            DOM.msgOverlay.innerText = "Connecting to Cloud Database...";
+            DOM.msgOverlay.style.display = 'block';
+            
+            try {
+                const res = await fetch(INTRADAY_CSV_URL + "&_t=" + Date.now());
+                const text = await res.text();
+                
+                const lines = text.split(/\r?\n/);
+                let coords = [];
+                
+                for(let i = 1; i < lines.length; i++) {
+                    const columns = lines[i].split(',');
+                    if (columns.length < 3) continue;
+                    
+                    const symbol = columns[1].replace(/['"]/g, '').trim();
+                    if (symbol === currentTicker) {
+                        const datetimeStr = columns[0].replace(/['"]/g, '').trim();
+                        const price = parseFloat(columns[2]);
+                        if (!isNaN(price)) {
+                            coords.push({ timeStr: datetimeStr, price: price });
+                        }
+                    }
+                }
+                
+                if (coords.length === 0) {
+                    DOM.msgOverlay.innerText = `No live data inside tab for ${currentTicker} yet today.`;
+                    clearCanvas();
+                    return;
+                }
+                
+                if (currentTimeMode === 'interval') {
+                    const step = parseInt(currentTimeValue);
+                    if (step > 1) {
+                        coords = coords.filter((_, idx) => idx % step === 0);
+                    }
+                }
+                
+                DOM.msgOverlay.style.display = 'none';
+                drawCanvasGraph(coords);
+                
+            } catch (err) {
+                console.error(err);
+                DOM.msgOverlay.innerText = "Database connection offline. Retrying...";
+            }
+        }
+
+        function clearCanvas() {
+            const ctx = DOM.canvas.getContext('2d');
+            ctx.clearRect(0, 0, DOM.canvas.width, DOM.canvas.height);
+        }
+
+        function drawCanvasGraph(points) {
+            const canvas = DOM.canvas;
+            const ctx = canvas.getContext('2d');
+            
+            const dpr = window.devicePixelRatio || 1;
+            const rect = canvas.getBoundingClientRect();
+            canvas.width = rect.width * dpr;
+            canvas.height = rect.height * dpr;
+            ctx.scale(dpr, dpr);
+            
+            const width = rect.width;
+            const height = rect.height;
+            
+            const paddingRight = 65;
+            const paddingBottom = 30;
+            const paddingTop = 20;
+            const paddingLeft = 20;
+            
+            const graphWidth = width - paddingLeft - paddingRight;
+            const graphHeight = height - paddingTop - paddingBottom;
+            
+            const prices = points.map(p => p.price);
+            const maxPrice = Math.max(...prices) * 1.002;
+            const minPrice = Math.min(...prices) * 0.998;
+            const priceRange = maxPrice - minPrice;
+            
+            ctx.fillStyle = '#111111';
+            ctx.fillRect(0, 0, width, height);
+            
+            ctx.strokeStyle = '#1C1C1E';
+            ctx.lineWidth = 1;
+            ctx.fillStyle = '#8E8E93';
+            ctx.font = "600 11px 'Inter Tight'";
+            ctx.textAlign = 'left';
+            
+            const gridLines = 4;
+            for(let i = 0; i <= gridLines; i++) {
+                const ratio = i / gridLines;
+                const y = paddingTop + (graphHeight * (1 - ratio));
+                const currentPriceVal = minPrice + (priceRange * ratio);
+                
+                ctx.beginPath();
+                ctx.moveTo(paddingLeft, y);
+                ctx.lineTo(width - paddingRight, y);
+                ctx.stroke();
+                
+                ctx.fillText(`$${currentPriceVal.toFixed(2)}`, width - paddingRight + 10, y + 4);
+            }
+            
+            let renderCoords = [];
+            for(let i = 0; i < points.length; i++) {
+                const xRatio = i / (points.length - 1);
+                const x = paddingLeft + (xRatio * graphWidth);
+                
+                const yRatio = (points.length === 1) ? 0.5 : (points[i].price - minPrice) / priceRange;
+                const y = paddingTop + (graphHeight * (1 - yRatio));
+                
+                renderCoords.push({ x: x, y: y });
+            }
+            
+            // Render Alpha Gradient under the primary line path
+            ctx.beginPath();
+            ctx.moveTo(renderCoords[0].x, paddingTop + graphHeight);
+            for(const pt of renderCoords) {
+                ctx.lineTo(pt.x, pt.y);
+            }
+            ctx.lineTo(renderCoords[renderCoords.length - 1].x, paddingTop + graphHeight);
+            ctx.closePath();
+            
+            const gradient = ctx.createLinearGradient(0, paddingTop, 0, paddingTop + graphHeight);
+            gradient.addColorStop(0, `${currentBrandColor}33`); 
+            gradient.addColorStop(1, `${currentBrandColor}00`); 
+            ctx.fillStyle = gradient;
+            ctx.fill();
+            
+            // Draw Trendline path
+            ctx.beginPath();
+            ctx.moveTo(renderCoords[0].x, renderCoords[0].y);
+            for(let i = 1; i < renderCoords.length; i++) {
+                ctx.lineTo(renderCoords[i].x, renderCoords[i].y);
+            }
+            ctx.strokeStyle = currentBrandColor;
+            ctx.lineWidth = 2.5;
+            ctx.lineJoin = 'round';
+            ctx.lineCap = 'round';
+            ctx.stroke();
+            
+            // Draw Proportional-num Timestamps along x-axis boundary
+            ctx.fillStyle = '#8E8E93';
+            ctx.textAlign = 'center';
+            const timestampIndices = [0, Math.floor(points.length / 2), points.length - 1];
+            
+            timestampIndices.forEach(idx => {
+                if (idx >= 0 && idx < points.length) {
+                    const pt = renderCoords[idx];
+                    const fullTimeStr = points[idx].timeStr; 
+                    const timeOnly = fullTimeStr.split(' ')[1] ? fullTimeStr.split(' ')[1].substring(0, 5) : fullTimeStr;
+                    ctx.fillText(timeOnly, pt.x, height - 10);
+                }
+            });
+        }
+
         function updateClockAndStatus() {
             const now = new Date();
             const timeOptions = { timeZone: 'America/Chicago', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true };
             
-            // Simplified clock: The text "Central Time" is now removed since it is clarified on the right side
             DOM.clock.innerText = `Time: ${now.toLocaleTimeString('en-US', timeOptions)}`;
 
-            // Operational parameters based on Central Time validation
             const ctString = now.toLocaleString("en-US", { timeZone: "America/Chicago" });
             const ctDate = new Date(ctString);
             const day = ctDate.getDay(); 
@@ -273,12 +455,10 @@
             const minute = ctDate.getMinutes(); 
             
             const timeInMinutes = (hour * 60) + minute;
-            const marketOpen = (8 * 60) + 30; // 08:30 CT
-            const marketClose = 15 * 60;      // 15:00 CT
+            const marketOpen = (8 * 60) + 30; 
+            const marketClose = 15 * 60;      
             
             let isMarketOpen = false;
-            
-            // Temporal bounds validation 
             if (day !== 0 && day !== 6 && timeInMinutes >= marketOpen && timeInMinutes < marketClose) {
                 isMarketOpen = true;
             }
@@ -289,28 +469,21 @@
                 DOM.status.innerHTML = `Live Tracking <span style="color: #BFBFBF; font-weight: 600;">(Market Closed)</span>`;
             }
 
-            // --- DYNAMIC COUNTDOWN ENGINE ---
             let targetDayOffset = 0;
             let targetMinutes = 0;
             let isClosing = false;
             
-            if (day === 0) { // Sunday
-                targetDayOffset = 1;
-                targetMinutes = marketOpen;
-            } else if (day === 6) { // Saturday
-                targetDayOffset = 2;
-                targetMinutes = marketOpen;
-            } else { // Weekday
+            if (day === 0) { 
+                targetDayOffset = 1; targetMinutes = marketOpen;
+            } else if (day === 6) { 
+                targetDayOffset = 2; targetMinutes = marketOpen;
+            } else { 
                 if (timeInMinutes < marketOpen) {
-                    targetDayOffset = 0; 
-                    targetMinutes = marketOpen;
+                    targetDayOffset = 0; targetMinutes = marketOpen;
                 } else if (timeInMinutes >= marketOpen && timeInMinutes < marketClose) {
-                    targetDayOffset = 0; 
-                    targetMinutes = marketClose;
-                    isClosing = true;
-                } else { // After close on a weekday
-                    targetDayOffset = (day === 5) ? 3 : 1; // +3 days if Friday, +1 day otherwise
-                    targetMinutes = marketOpen;
+                    targetDayOffset = 0; targetMinutes = marketClose; isClosing = true;
+                } else { 
+                    targetDayOffset = (day === 5) ? 3 : 1; targetMinutes = marketOpen;
                 }
             }
             
@@ -321,14 +494,11 @@
                 diffMinutes = (24 * 60 - timeInMinutes) + ((targetDayOffset - 1) * 24 * 60) + targetMinutes;
             }
             
-            // Convert to Days, Hours, Minutes
             const totalHrs = Math.floor(diffMinutes / 60);
             const diffMins = diffMinutes % 60;
-            
             const diffDays = Math.floor(totalHrs / 24);
             const remainingHrs = totalHrs % 24;
             
-            // Construct the display string dynamically
             let timeString = "";
             if (diffDays > 0) {
                 timeString = `${diffDays}d ${remainingHrs}h`;
@@ -345,11 +515,14 @@
             }
         }
 
-        /* Primary Initialization Sequence */
         setInterval(updateClockAndStatus, 1000);
         initializeTerminal();
         updateClockAndStatus(); 
         
+        setInterval(() => {
+            const isIntradayMode = (currentTimeMode === 'interval') || (currentTimeMode === 'range' && currentTimeValue === '1D');
+            if (isIntradayMode) fetchAndDrawNativeData();
+        }, 60000);
     </script>
 </body>
 </html>
