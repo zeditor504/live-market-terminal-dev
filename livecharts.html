@@ -7,7 +7,6 @@
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <!-- Reverted back to purely Inter Tight -->
     <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;600&display=swap" rel="stylesheet">
     
     <style>
@@ -203,7 +202,7 @@
             }
 
             // PASTE YOUR FINNHUB KEY HERE
-            const API_KEY = "d8ppadpr01qqd60jn7o0d8ppadpr01qqd60jn7og"; 
+            const API_KEY = "YOUR_FINNHUB_KEY"; 
             liveSocket = new WebSocket(`wss://ws.finnhub.io?token=${API_KEY}`);
 
             liveSocket.addEventListener('open', function (event) {
@@ -256,7 +255,6 @@
                 const intraText = await intraRes.text();
                 const macroText = await macroRes.text();
 
-                // Memory leak fix: Flushes old data cleanly before updating
                 localMemoryDB.intraday = {};
                 localMemoryDB.macro = {};
 
@@ -532,13 +530,24 @@
             const paddingTop = 20;
             const paddingLeft = 20;
             
+            const prices = state.points.map(p => p.price);
+            const rawMax = Math.max(...prices);
+            const rawMin = Math.min(...prices);
+            
+            // PROPORTIONAL RANGE SCALING: Fixed 12% headspace buffer identical across all assets
+            let maxPrice, minPrice;
+            if (rawMax === rawMin) {
+                maxPrice = rawMax * 1.05;
+                minPrice = rawMin * 0.95;
+            } else {
+                const rangePadding = (rawMax - rawMin) * 0.12; 
+                maxPrice = rawMax + rangePadding;
+                minPrice = rawMin - rangePadding;
+            }
+            const priceRange = maxPrice - minPrice;
+            
             const graphWidth = width - paddingLeft - paddingRight;
             const graphHeight = height - paddingTop - paddingBottom;
-            
-            const prices = state.points.map(p => p.price);
-            const maxPrice = Math.max(...prices) * 1.002;
-            const minPrice = Math.min(...prices) * 0.998;
-            const priceRange = maxPrice - minPrice;
             
             ctx.fillStyle = '#111111';
             ctx.fillRect(0, 0, width, height);
