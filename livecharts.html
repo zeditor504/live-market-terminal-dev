@@ -530,21 +530,24 @@
             const paddingTop = 20;
             const paddingLeft = 20;
             
+            // =========================================================================
+            // PRICE BOUNDARY ENGINE (FLOORED AT $0.00)
+            // =========================================================================
             const prices = state.points.map(p => p.price);
             const rawMax = Math.max(...prices);
             const rawMin = Math.min(...prices);
-            
-            // PROPORTIONAL RANGE SCALING: Fixed 12% headspace buffer identical across all assets
+
             let maxPrice, minPrice;
             if (rawMax === rawMin) {
                 maxPrice = rawMax * 1.05;
-                minPrice = rawMin * 0.95;
+                minPrice = Math.max(0, rawMin * 0.95);
             } else {
                 const rangePadding = (rawMax - rawMin) * 0.12; 
                 maxPrice = rawMax + rangePadding;
-                minPrice = rawMin - rangePadding;
+                // Math.max guarantees the chart floor clamps perfectly at 0 if padding goes negative
+                minPrice = Math.max(0, rawMin - rangePadding); 
             }
-            const priceRange = maxPrice - minPrice;
+            const priceRange = maxPrice - minPrice; 
             
             const graphWidth = width - paddingLeft - paddingRight;
             const graphHeight = height - paddingTop - paddingBottom;
