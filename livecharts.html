@@ -77,6 +77,32 @@
             position: relative; background-color: #111111;
         }
         
+        /* Robinhood-style UI Overlay CSS */
+        .chart-stats {
+            position: absolute;
+            top: 25px;
+            right: 30px;
+            text-align: right;
+            pointer-events: none; /* Ensures the mouse passes through it to the canvas below */
+            z-index: 10;
+        }
+        
+        #stat-price {
+            font-size: 2.8rem;
+            font-weight: 600;
+            color: #FFFFFF;
+            letter-spacing: -0.04em;
+            margin-bottom: 2px;
+            font-variant-numeric: tabular-nums; /* Prevents text jitter when numbers tick */
+        }
+        
+        #stat-change {
+            font-size: 1.15rem;
+            font-weight: 600;
+            font-variant-numeric: tabular-nums;
+            transition: color 0.3s ease;
+        }
+
         #native-canvas-chart {
             width: 100%; height: 100%; display: block; cursor: crosshair; touch-action: none;
         }
@@ -98,6 +124,9 @@
 
         @media (max-width: 800px) {
             .chart-wrapper { height: 50vh; }
+            .chart-stats { top: 15px; right: 20px; }
+            #stat-price { font-size: 2rem; }
+            #stat-change { font-size: 0.95rem; }
             .chart-footer { flex-direction: column; align-items: center; gap: 8px; }
             .chart-footer > div { text-align: center !important; }
         }
@@ -145,6 +174,12 @@
 
     <div class="chart-wrapper">
         <div id="chart-msg-overlay" class="chart-message">Syncing Databases...</div>
+        
+        <div id="chart-stats-overlay" class="chart-stats" style="display: none;">
+            <div id="stat-price">---</div>
+            <div id="stat-change">---</div>
+        </div>
+
         <canvas id="native-canvas-chart"></canvas>
     </div>
     
@@ -168,10 +203,7 @@
         const COLOR_DEMAND = "#e95448"; 
         const COLOR_SUPPLY = "#30998b"; 
 
-        let localMemoryDB = {
-            intraday: {}, 
-            macro: {}     
-        };
+        let localMemoryDB = { intraday: {}, macro: {} };
         
         let state = {
             points: [],
@@ -189,12 +221,12 @@
             status: document.getElementById('market-status'),
             title: document.getElementById('stock-title'),
             canvas: document.getElementById('native-canvas-chart'),
-            msgOverlay: document.getElementById('chart-msg-overlay')
+            msgOverlay: document.getElementById('chart-msg-overlay'),
+            statsOverlay: document.getElementById('chart-stats-overlay'),
+            statPrice: document.getElementById('stat-price'),
+            statChange: document.getElementById('stat-change')
         };
 
-        // ==========================================
-        // REAL-TIME WEBSOCKET ENGINE
-        // ==========================================
         let liveSocket = null;
         let lastTickTime = 0;
 
@@ -210,7 +242,6 @@
 
             liveSocket.addEventListener('open', function (event) {
                 liveSocket.send(JSON.stringify({'type':'subscribe', 'symbol': ticker}));
-                console.log(`📡 Live Tick Stream Connected: ${ticker}`);
             });
 
             liveSocket.addEventListener('message', function (event) {
@@ -223,7 +254,8 @@
                         lastTickTime = now;
                         
                         const currentPrice = response.data[0].p;
-                        const tradeVolume = response.data[0].v;
+                        // EXTRAPOLATION FIX: Multiply IEX volume by 40 to match Consolidated Tape proportions
+                        const tradeVolume = response.data[0].v * 40; 
                         const dateObj = new Date(response.data[0].t);
                         
                         const offset = dateObj.getTimezoneOffset() * 60000;
@@ -235,31 +267,22 @@
 
                         if (intradayArray.length > 0) {
                             let lastPoint = intradayArray[intradayArray.length - 1];
-                            // Extract just the YYYY-MM-DD HH:MM to group by the minute
                             let currentMinute = dtStr.substring(0, 16);
                             let lastMinute = lastPoint.timeStr.substring(0, 16);
 
                             if (currentMinute === lastMinute) {
-                                // Accumulate the volume and update the closing price for the current minute
                                 lastPoint.price = currentPrice;
-                                lastPoint.volume += tradeVolume;
-                                lastPoint.timeStr = dtStr; // Updates the tooltip to the exact second
+                                lastPoint.volume += tradeVolume; // Accumulate extrapolated volume
+                                lastPoint.timeStr = dtStr;
                             } else {
-                                // A new minute has started, push a brand new bar
-                                intradayArray.push({
-                                    timeStr: dtStr,
-                                    price: currentPrice,
-                                    volume: tradeVolume
-                                });
+                                intradayArray.push({ timeStr: dtStr, price: currentPrice, volume: tradeVolume });
                             }
                         } else {
                             intradayArray.push({ timeStr: dtStr, price: currentPrice, volume: tradeVolume });
                         }
 
                         const isMacroMode = (currentTimeMode === 'range' && currentTimeValue !== '1D');
-                        if (!isMacroMode) {
-                            loadChartFromMemory();
-                        }
+                        if (!isMacroMode) loadChartFromMemory();
                     }
                 }
             });
@@ -268,6 +291,7 @@
         async function bootDataEngine() {
             DOM.msgOverlay.innerText = "Syncing RAM Cache...";
             DOM.msgOverlay.style.display = 'block';
+            DOM.statsOverlay.style.display = 'none';
 
             try {
                 const [intraRes, macroRes] = await Promise.all([
@@ -411,6 +435,7 @@
             if (coords.length === 0) {
                 DOM.msgOverlay.innerText = `No ${isMacroMode ? currentTimeValue : 'live'} data found for ${currentTicker}.`;
                 DOM.msgOverlay.style.display = 'block';
+                DOM.statsOverlay.style.display = 'none';
                 clearCanvas();
                 state.points = [];
                 return;
@@ -421,17 +446,13 @@
             renderCanvas();
         }
 
-        // ==========================================
-        // DYNAMIC TIMESTAMP ENGINE (WITH DATE SUPPORT)
-        // ==========================================
         function formatTimeString(timeStr, isAxis = false) {
             const isMacroMode = (currentTimeMode === 'range' && currentTimeValue !== '1D');
             const parts = timeStr.split(' ');
             
             if (!isMacroMode) {
                 if (parts.length > 1) {
-                    if (isAxis) return parts[1].substring(0, 5); // Bottom Axis: "09:30"
-                    // Hover Tooltip: Extracted Date + Time
+                    if (isAxis) return parts[1].substring(0, 5); 
                     const dateParts = parts[0].split('-');
                     return `${dateParts[1]}/${dateParts[2]}/${dateParts[0]} ${parts[1].substring(0,5)}`; 
                 }
@@ -547,6 +568,26 @@
         function renderCanvas() {
             if (state.points.length === 0) return;
             
+            // ==========================================
+            // UI OVERLAY: LIVE KEY METRICS ENGINE
+            // ==========================================
+            const currentPriceData = state.points[state.points.length - 1].price;
+            const startPriceData = state.points[0].price;
+            const priceDiff = currentPriceData - startPriceData;
+            const percentDiff = (priceDiff / startPriceData) * 100;
+            
+            DOM.statsOverlay.style.display = 'block';
+            DOM.statPrice.innerText = `$${currentPriceData.toFixed(2)}`;
+            
+            const sign = priceDiff >= 0 ? '+' : '';
+            const changeColor = priceDiff >= 0 ? '#28C76F' : '#E31937'; 
+            
+            DOM.statChange.innerText = `${sign}$${priceDiff.toFixed(2)} (${sign}${percentDiff.toFixed(2)}%)`;
+            DOM.statChange.style.color = changeColor;
+
+            // ==========================================
+            // CORE CANVAS RENDERING ENGINE
+            // ==========================================
             const canvas = DOM.canvas;
             const ctx = canvas.getContext('2d');
             
@@ -671,7 +712,6 @@
             ctx.lineCap = 'round';
             ctx.stroke();
 
-            // Hover Tooltips with New Date Formatting Logic
             if (state.hoverIndex !== -1 && renderCoords[state.hoverIndex]) {
                 const activePt = renderCoords[state.hoverIndex];
                 
@@ -693,7 +733,7 @@
                 ctx.stroke();
 
                 const activeData = state.points[state.hoverIndex];
-                const timeLabel = formatTimeString(activeData.timeStr, false); // false = Return Full Tooltip Date
+                const timeLabel = formatTimeString(activeData.timeStr, false); 
                 const priceText = `$${activeData.price.toFixed(2)}`;
                 
                 ctx.font = "600 12px 'Inter Tight'";
@@ -735,7 +775,7 @@
                 let dataIdx = Math.round(targetDataRatio * (state.points.length - 1));
                 
                 if (dataIdx >= 0 && dataIdx < state.points.length) {
-                    const timeLabel = formatTimeString(state.points[dataIdx].timeStr, true); // true = Return Short X-Axis Text
+                    const timeLabel = formatTimeString(state.points[dataIdx].timeStr, true);
                     ctx.fillText(timeLabel, targetScreenX, height - 10);
                 }
             }
