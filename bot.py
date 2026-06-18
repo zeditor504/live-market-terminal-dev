@@ -10,6 +10,11 @@ import concurrent.futures
 def fetch_ticker_data(ticker):
     try:
         stock = yf.Ticker(ticker)
+        
+        # Tap directly into the live consolidated tape for literal penny-accuracy
+        exact_current_price = round(float(stock.fast_info['last_price']), 2)
+        previous_price = round(float(stock.fast_info['previous_close']), 2)
+        
         hist = stock.history(period="1y", auto_adjust=False, actions=True)
         hist = hist.dropna(subset=['Close', 'High'])
         
@@ -19,35 +24,30 @@ def fetch_ticker_data(ticker):
         if 'Stock Splits' in hist.columns:
             splits = hist['Stock Splits'].replace(0.0, 1.0)
             cum_future_splits = splits.iloc[::-1].cumprod().iloc[::-1].shift(-1).fillna(1.0)
-            hist['True_Close'] = hist['Close'] / cum_future_splits
             hist['True_High'] = hist['High'] / cum_future_splits
         else:
-            hist['True_Close'] = hist['Close']
             hist['True_High'] = hist['High']
             
-        current_price = round(float(hist['True_Close'].iloc[-1]), 2)
-        previous_price = round(float(hist['True_Close'].iloc[-2]), 2)
-        
         high_52w = round(float(hist['True_High'].max()), 2)
         high_date = hist['True_High'].idxmax().strftime('%m/%d/%Y')
         
-        dollar_change = round(current_price - previous_price, 2)
+        dollar_change = round(exact_current_price - previous_price, 2)
         
         if previous_price > 0:
             percent_change = (dollar_change / previous_price) * 100
         else:
             percent_change = 0.0
             
-        cost_of_25 = round(current_price * 25, 2)
-        profit_25 = round((high_52w - current_price) * 25, 2)
+        cost_of_25 = round(exact_current_price * 25, 2)
+        profit_25 = round((high_52w - exact_current_price) * 25, 2)
         
-        if current_price > 0:
-            upside_raw = (high_52w - current_price) / current_price
+        if exact_current_price > 0:
+            upside_raw = (high_52w - exact_current_price) / exact_current_price
         else:
             upside_raw = 0.0
             
         row_data = [
-            "", ticker, current_price, percent_change, dollar_change, 
+            "", ticker, exact_current_price, percent_change, dollar_change, 
             high_52w, high_date, cost_of_25, profit_25, upside_raw
         ]
         
@@ -59,6 +59,10 @@ def fetch_ticker_data(ticker):
 def fetch_intraday_data(ticker):
     try:
         stock = yf.Ticker(ticker)
+        
+        # Pull exact tape price to overwrite aggregate drift
+        exact_price = round(float(stock.fast_info['last_price']), 2)
+        
         hist = stock.history(period="1d", interval="1m", auto_adjust=False)
         hist = hist.dropna(subset=['Close'])
         
@@ -67,6 +71,10 @@ def fetch_intraday_data(ticker):
             dt_str = timestamp.strftime('%Y-%m-%d %H:%M:%S')
             price = round(float(row['Close']), 2)
             rows.append([dt_str, ticker, price])
+            
+        # Force the final coordinate of the array to exactly match the official live/close print
+        if rows:
+            rows[-1][2] = exact_price
             
         return rows, None
         
@@ -88,15 +96,23 @@ def fetch_macro_data(ticker):
     all_rows = []
     try:
         stock = yf.Ticker(ticker)
+        exact_price = round(float(stock.fast_info['last_price']), 2)
+
         for timeframe, config in macro_configs.items():
-            # FIXED: auto_adjust=True guarantees perfect historical split/dividend math mapping
             hist = stock.history(period=config["period"], interval=config["interval"], auto_adjust=True)
             hist = hist.dropna(subset=['Close'])
 
+            timeframe_rows = []
             for timestamp, row in hist.iterrows():
                 dt_str = timestamp.strftime('%Y-%m-%d %H:%M:%S')
                 price = round(float(row['Close']), 2)
-                all_rows.append([dt_str, ticker, timeframe, price])
+                timeframe_rows.append([dt_str, ticker, timeframe, price])
+
+            # Force the final coordinate of each macro array to match the official live/close print
+            if timeframe_rows:
+                timeframe_rows[-1][3] = exact_price
+                
+            all_rows.extend(timeframe_rows)
 
         return all_rows, None
         
