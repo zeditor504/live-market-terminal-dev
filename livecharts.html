@@ -175,6 +175,64 @@
             macro: {}     
         };
         
+        // ==========================================
+        // REAL-TIME WEBSOCKET ENGINE
+        // ==========================================
+        let liveSocket = null;
+        let lastTickTime = 0;
+
+        function connectLiveStream(ticker) {
+            // Close the existing tunnel if you click a different stock
+            if (liveSocket) {
+                liveSocket.send(JSON.stringify({'type':'unsubscribe', 'symbol': currentTicker}));
+                liveSocket.close();
+            }
+
+            // PASTE YOUR FINNHUB KEY HERE
+            const API_KEY = "d8ppadpr01qqd60jn7o0d8ppadpr01qqd60jn7og"; 
+            liveSocket = new WebSocket(`wss://ws.finnhub.io?token=${API_KEY}`);
+
+            liveSocket.addEventListener('open', function (event) {
+                liveSocket.send(JSON.stringify({'type':'subscribe', 'symbol': ticker}));
+                console.log(`📡 Live Tick Stream Connected: ${ticker}`);
+            });
+
+            liveSocket.addEventListener('message', function (event) {
+                const response = JSON.parse(event.data);
+                
+                if (response.type === 'trade') {
+                    const now = Date.now();
+                    
+                    // Throttle: Only process a tick every 1000ms to maintain 60FPS canvas performance
+                    if (now - lastTickTime > 1000) {
+                        lastTickTime = now;
+                        
+                        const currentPrice = response.data[0].p;
+                        const dateObj = new Date(response.data[0].t);
+                        
+                        // Format to match your Python backend string (YYYY-MM-DD HH:MM:SS)
+                        const offset = dateObj.getTimezoneOffset() * 60000;
+                        const localTime = new Date(dateObj.getTime() - offset);
+                        const dtStr = localTime.toISOString().replace('T', ' ').substring(0, 19);
+
+                        // Inject the live coordinate directly into your RAM Cache
+                        if (!localMemoryDB.intraday[ticker]) localMemoryDB.intraday[ticker] = [];
+                        
+                        localMemoryDB.intraday[ticker].push({ 
+                            timeStr: dtStr, 
+                            price: currentPrice 
+                        });
+
+                        // Instantly redraw the canvas if you are on an intraday view
+                        const isMacroMode = (currentTimeMode === 'range' && currentTimeValue !== '1D');
+                        if (!isMacroMode) {
+                            loadChartFromMemory();
+                        }
+                    }
+                }
+            });
+        }
+
         let state = {
             points: [],
             scaleX: 1,
@@ -272,6 +330,7 @@
             
             resetPanZoom();
             loadChartFromMemory(); // 0ms lag execution
+            connectLiveStream(symbolName);
         }
 
         function setTime(mode, value, clickedButton) {
@@ -314,6 +373,7 @@
             window.addEventListener('resize', () => { if(state.points.length > 0) renderCanvas(); });
             setupCanvasInteractions();
             bootDataEngine(); // Fire the parallel network bootloader
+            connectLiveStream(currentTicker);
         }
 
         // Native 0-Latency Array Mapper
