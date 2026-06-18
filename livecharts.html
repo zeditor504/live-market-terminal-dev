@@ -7,7 +7,7 @@
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;600&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
     
     <style>
         body { 
@@ -92,8 +92,9 @@
         }
         .chart-footer > div { flex: 1; }
         
-        #live-clock { text-align: left; color: #FFFFFF; font-weight: 600; }
-        #market-countdown { text-align: center; color: #FFFFFF; font-weight: 600; } 
+        /* Applied JetBrains Mono to all data-heavy footer elements */
+        #live-clock { text-align: left; color: #FFFFFF; font-family: 'JetBrains Mono', monospace; font-weight: 600; font-size: 0.9rem; }
+        #market-countdown { text-align: center; color: #FFFFFF; font-family: 'JetBrains Mono', monospace; font-weight: 600; font-size: 0.9rem; } 
         .chart-footer > div:last-child { text-align: right; color: #FFFFFF; font-weight: 600; }
 
         @media (max-width: 800px) {
@@ -155,15 +156,15 @@
     </div>
 
     <script type="text/javascript">
+        // Awaiting your MacroHistory CSV link here! Once you generate it, we will add the routing logic.
         const INTRADAY_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSMXRNvl_MWdY7TDj8bXruKqlFyoulqEc33XWZ1q5tY9rn2rdLSB6F-VqufSwtHup2eLvZwcBA3fX-j/pub?gid=1782241116&single=true&output=csv";
 
         let currentSymbolCode = localStorage.getItem('savedSymbolCode') || "TSLA";
         let currentTicker = localStorage.getItem('savedTicker') || "TSLA";
         let currentBrandColor = localStorage.getItem('savedBrandColor') || "#E31937";
         let currentTimeMode = localStorage.getItem('savedTimeMode') || "range"; 
-        let currentTimeValue = localStorage.getItem('savedTimeValue') || "1D"; // Defaulted to 1D instead of YTD to show data immediately
+        let currentTimeValue = localStorage.getItem('savedTimeValue') || "1D";
 
-        // Locked Global Chart Color
         const CHART_COLOR = "#2863fc"; 
         
         let state = {
@@ -244,13 +245,12 @@
         }
 
         function renderChart() {
-            // TradingView logic removed entirely. Route natively or halt for backend upgrades.
             const isMacroMode = (currentTimeMode === 'range' && currentTimeValue !== '1D');
             
             if (isMacroMode) {
                 state.points = [];
                 clearCanvas();
-                DOM.msgOverlay.innerText = `Connecting to Macro Database for ${currentTimeValue}... (Backend Pipeline Required)`;
+                DOM.msgOverlay.innerText = `Connecting to Macro Database for ${currentTimeValue}... (Awaiting CSV Setup)`;
                 DOM.msgOverlay.style.display = 'block';
             } else {
                 fetchAndDrawNativeData();
@@ -433,10 +433,11 @@
             ctx.fillStyle = '#111111';
             ctx.fillRect(0, 0, width, height);
             
+            // Replaced default UI font with JetBrains Mono for the Grid Matrix
             ctx.strokeStyle = '#1C1C1E';
             ctx.lineWidth = 1;
             ctx.fillStyle = '#8E8E93';
-            ctx.font = "600 11px 'Inter Tight'";
+            ctx.font = "600 11px 'JetBrains Mono', monospace";
             ctx.textAlign = 'left';
             
             const gridLines = 4;
@@ -519,7 +520,8 @@
                 const timeOnly = activeData.timeStr.split(' ')[1] ? activeData.timeStr.split(' ')[1].substring(0, 5) : activeData.timeStr;
                 const priceText = `$${activeData.price.toFixed(2)}`;
                 
-                ctx.font = "600 12px 'Inter Tight'";
+                // Replaced default UI font with JetBrains Mono for Tooltips
+                ctx.font = "600 12px 'JetBrains Mono', monospace";
                 const textWidth = Math.max(ctx.measureText(priceText).width, ctx.measureText(timeOnly).width) + 20;
                 
                 let boxX = activePt.x + 10;
@@ -539,15 +541,16 @@
                 ctx.textAlign = 'left';
                 ctx.fillText(priceText, boxX + 10, boxY + 16);
                 ctx.fillStyle = '#8E8E93';
-                ctx.font = "400 11px 'Inter Tight'";
+                ctx.font = "400 11px 'JetBrains Mono', monospace";
                 ctx.fillText(timeOnly, boxX + 10, boxY + 32);
             }
 
             ctx.restore(); 
 
+            // Replaced default UI font with JetBrains Mono for Bottom Axis Timestamps
             ctx.fillStyle = '#8E8E93';
             ctx.textAlign = 'center';
-            ctx.font = "600 11px 'Inter Tight'";
+            ctx.font = "600 11px 'JetBrains Mono', monospace";
             
             const numLabels = 6; 
             for(let i = 0; i <= numLabels; i++) {
