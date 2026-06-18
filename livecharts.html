@@ -78,10 +78,7 @@
         }
         
         #native-canvas-chart {
-            width: 100%; height: 100%; display: none; cursor: crosshair; touch-action: none;
-        }
-        #tradingview_container {
-            width: 100%; height: 100%; display: block;
+            width: 100%; height: 100%; display: block; cursor: crosshair; touch-action: none;
         }
         
         .chart-message {
@@ -141,18 +138,14 @@
     </div>
 
     <div class="legend-container">
-        <div class="legend-item"><div class="color-square" style="background-color: #e95448;"></div><span class="legend-text">Price Trend</span></div>
-        <div class="legend-item"><div class="color-square" style="background-color: #30998b;"></div><span class="legend-text">Demand</span></div>
-        <div class="legend-item"><div class="color-square" style="background-color: #2863fc;"></div><span class="legend-text">Supply</span></div>
+        <div class="legend-item"><div class="color-square" style="background-color: #2863fc;"></div><span class="legend-text">Price Trend</span></div>
+        <div class="legend-item"><div class="color-square" style="background-color: #e95448;"></div><span class="legend-text">Demand</span></div>
+        <div class="legend-item"><div class="color-square" style="background-color: #30998b;"></div><span class="legend-text">Supply</span></div>
     </div>
 
     <div class="chart-wrapper">
         <div id="chart-msg-overlay" class="chart-message">Connecting to Cloud Database...</div>
         <canvas id="native-canvas-chart"></canvas>
-        <div id="tradingview_container">
-            <div id="tradingview_chart" style="height:100%;width:100%"></div>
-            <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
-        </div>
     </div>
     
     <div class="chart-footer">
@@ -168,10 +161,11 @@
         let currentTicker = localStorage.getItem('savedTicker') || "TSLA";
         let currentBrandColor = localStorage.getItem('savedBrandColor') || "#E31937";
         let currentTimeMode = localStorage.getItem('savedTimeMode') || "range"; 
-        let currentTimeValue = localStorage.getItem('savedTimeValue') || "YTD";
+        let currentTimeValue = localStorage.getItem('savedTimeValue') || "1D"; // Defaulted to 1D instead of YTD to show data immediately
 
-        // Global Chart State Engine for Interactivity
-        const CHART_COLOR = "#e95448"; // Forcing the 3rd key color universally
+        // Locked Global Chart Color
+        const CHART_COLOR = "#2863fc"; 
+        
         let state = {
             points: [],
             scaleX: 1,
@@ -187,8 +181,6 @@
             countdown: document.getElementById('market-countdown'),
             status: document.getElementById('market-status'),
             title: document.getElementById('stock-title'),
-            chart: document.getElementById('tradingview_chart'),
-            tvContainer: document.getElementById('tradingview_container'),
             canvas: document.getElementById('native-canvas-chart'),
             msgOverlay: document.getElementById('chart-msg-overlay')
         };
@@ -252,39 +244,17 @@
         }
 
         function renderChart() {
-            const isIntradayMode = (currentTimeMode === 'interval') || (currentTimeMode === 'range' && currentTimeValue === '1D');
+            // TradingView logic removed entirely. Route natively or halt for backend upgrades.
+            const isMacroMode = (currentTimeMode === 'range' && currentTimeValue !== '1D');
             
-            if (isIntradayMode) {
-                DOM.tvContainer.style.display = 'none';
-                DOM.canvas.style.display = 'block';
-                fetchAndDrawNativeData();
+            if (isMacroMode) {
+                state.points = [];
+                clearCanvas();
+                DOM.msgOverlay.innerText = `Connecting to Macro Database for ${currentTimeValue}... (Backend Pipeline Required)`;
+                DOM.msgOverlay.style.display = 'block';
             } else {
-                DOM.msgOverlay.style.display = 'none';
-                DOM.canvas.style.display = 'none';
-                DOM.tvContainer.style.display = 'block';
-                renderTradingViewWidget();
+                fetchAndDrawNativeData();
             }
-        }
-
-        function renderTradingViewWidget() {
-            DOM.chart.innerHTML = '';
-            const widgetConfig = {
-                "autosize": true,
-                "symbol": currentSymbolCode,   
-                "timezone": "America/Chicago", 
-                "theme": "dark",
-                "style": "3", 
-                "locale": "en",
-                "enable_publishing": false,
-                "allow_symbol_change": false, 
-                "hide_top_toolbar": true, 
-                "hide_legend": true, 
-                "container_id": "tradingview_chart"
-            };
-            if (currentTimeMode === "range") widgetConfig.range = currentTimeValue;
-            else widgetConfig.interval = currentTimeValue;
-
-            new TradingView.widget(widgetConfig);
         }
 
         async function fetchAndDrawNativeData() {
@@ -314,8 +284,7 @@
                 
                 if (coords.length === 0) {
                     DOM.msgOverlay.innerText = `No live data inside tab for ${currentTicker} yet today.`;
-                    const ctx = DOM.canvas.getContext('2d');
-                    ctx.clearRect(0, 0, DOM.canvas.width, DOM.canvas.height);
+                    clearCanvas();
                     return;
                 }
                 
@@ -336,41 +305,38 @@
             }
         }
 
-        /* -----------------------------------------------------------
-           INTERACTIVE CANVAS ENGINE (Pan, Zoom, Hover Tooltips)
-           ----------------------------------------------------------- */
         function setupCanvasInteractions() {
             const cvs = DOM.canvas;
             
-            // Handle Zooming via Scroll Wheel or Touchpad Pinch
             cvs.addEventListener('wheel', (e) => {
                 e.preventDefault();
+                if(state.points.length === 0) return;
+                
                 const zoomSensitivity = 0.001;
                 const zoomFactor = 1 - (e.deltaY * zoomSensitivity);
                 
                 state.scaleX *= zoomFactor;
-                if (state.scaleX < 1) state.scaleX = 1; // Prevent zooming out past 100%
-                if (state.scaleX > 20) state.scaleX = 20; // Cap extreme zoom
+                if (state.scaleX < 1) state.scaleX = 1; 
+                if (state.scaleX > 20) state.scaleX = 20; 
                 
-                // Adjust pan to zoom towards mouse position (anchor point)
                 const rect = cvs.getBoundingClientRect();
-                const mouseX = e.clientX - rect.left - 20; // 20 is paddingLeft
+                const mouseX = e.clientX - rect.left - 20; 
                 state.offsetX = mouseX - (mouseX - state.offsetX) * zoomFactor;
                 
                 clampPan();
                 requestAnimationFrame(renderCanvas);
             });
 
-            // Handle Panning via Click & Drag
             cvs.addEventListener('mousedown', (e) => {
+                if(state.points.length === 0) return;
                 state.isDragging = true;
                 state.startX = e.clientX - state.offsetX;
             });
             
             window.addEventListener('mouseup', () => { state.isDragging = false; });
             
-            // Handle Hover Crosshairs and Drag Logic
             cvs.addEventListener('mousemove', (e) => {
+                if(state.points.length === 0) return;
                 const rect = cvs.getBoundingClientRect();
                 const mouseX = e.clientX - rect.left;
                 const mouseY = e.clientY - rect.top;
@@ -380,7 +346,6 @@
                     clampPan();
                 }
 
-                // Detect closest point for Tooltip
                 if (state.points.length > 0) {
                     const paddingLeft = 20;
                     const graphWidth = rect.width - paddingLeft - 65;
@@ -407,14 +372,15 @@
                 requestAnimationFrame(renderCanvas);
             });
 
-            // Mobile Touch Support for Panning
             cvs.addEventListener('touchstart', (e) => {
+                if(state.points.length === 0) return;
                 if (e.touches.length === 1) {
                     state.isDragging = true;
                     state.startX = e.touches[0].clientX - state.offsetX;
                 }
             });
             cvs.addEventListener('touchmove', (e) => {
+                if(state.points.length === 0) return;
                 if (state.isDragging && e.touches.length === 1) {
                     state.offsetX = e.touches[0].clientX - state.startX;
                     clampPan();
@@ -429,6 +395,11 @@
             const minOffset = -((state.scaleX - 1) * (DOM.canvas.getBoundingClientRect().width - 85));
             if (state.offsetX > maxOffset) state.offsetX = maxOffset;
             if (state.offsetX < minOffset) state.offsetX = minOffset;
+        }
+
+        function clearCanvas() {
+            const ctx = DOM.canvas.getContext('2d');
+            ctx.clearRect(0, 0, DOM.canvas.width, DOM.canvas.height);
         }
 
         function renderCanvas() {
@@ -459,11 +430,9 @@
             const minPrice = Math.min(...prices) * 0.998;
             const priceRange = maxPrice - minPrice;
             
-            // 1. Draw Background
             ctx.fillStyle = '#111111';
             ctx.fillRect(0, 0, width, height);
             
-            // 2. Draw Y-Axis Horizontal Grid (Static, ignores pan/zoom)
             ctx.strokeStyle = '#1C1C1E';
             ctx.lineWidth = 1;
             ctx.fillStyle = '#8E8E93';
@@ -484,30 +453,23 @@
                 ctx.fillText(`$${currentPriceVal.toFixed(2)}`, width - paddingRight + 10, y + 4);
             }
             
-            // 3. Calculate Transformed Coordinates
             let renderCoords = [];
             for(let i = 0; i < state.points.length; i++) {
                 const xRatio = i / (state.points.length - 1);
-                // Apply Scale and Pan Offset to X
                 const x = paddingLeft + (xRatio * graphWidth * state.scaleX) + state.offsetX;
-                
                 const yRatio = (state.points.length === 1) ? 0.5 : (state.points[i].price - minPrice) / priceRange;
                 const y = paddingTop + (graphHeight * (1 - yRatio));
-                
                 renderCoords.push({ x: x, y: y, rawIdx: i });
             }
             
-            // Filter coordinates visually inside the bounding box for performance
             const visibleCoords = renderCoords.filter(pt => pt.x >= paddingLeft - 10 && pt.x <= width - paddingRight + 10);
             if (visibleCoords.length === 0) return;
 
-            // Clip the drawing area so lines don't bleed into the Y-axis text
             ctx.save();
             ctx.beginPath();
             ctx.rect(paddingLeft, paddingTop, graphWidth, graphHeight);
             ctx.clip();
 
-            // 4. Draw Alpha Gradient
             ctx.beginPath();
             ctx.moveTo(visibleCoords[0].x, paddingTop + graphHeight);
             for(const pt of visibleCoords) {
@@ -522,7 +484,6 @@
             ctx.fillStyle = gradient;
             ctx.fill();
             
-            // 5. Draw Target Trendline
             ctx.beginPath();
             ctx.moveTo(visibleCoords[0].x, visibleCoords[0].y);
             for(let i = 1; i < visibleCoords.length; i++) {
@@ -534,11 +495,9 @@
             ctx.lineCap = 'round';
             ctx.stroke();
 
-            // 6. Draw Hover Tooltip & Crosshair (if active)
             if (state.hoverIndex !== -1 && renderCoords[state.hoverIndex]) {
                 const activePt = renderCoords[state.hoverIndex];
                 
-                // Vertical Crosshair Line
                 ctx.beginPath();
                 ctx.moveTo(activePt.x, paddingTop);
                 ctx.lineTo(activePt.x, paddingTop + graphHeight);
@@ -548,7 +507,6 @@
                 ctx.stroke();
                 ctx.setLineDash([]);
                 
-                // Active Point Marker
                 ctx.beginPath();
                 ctx.arc(activePt.x, activePt.y, 5, 0, 2 * Math.PI);
                 ctx.fillStyle = CHART_COLOR;
@@ -557,7 +515,6 @@
                 ctx.lineWidth = 2;
                 ctx.stroke();
 
-                // Floating Tooltip Box
                 const activeData = state.points[state.hoverIndex];
                 const timeOnly = activeData.timeStr.split(' ')[1] ? activeData.timeStr.split(' ')[1].substring(0, 5) : activeData.timeStr;
                 const priceText = `$${activeData.price.toFixed(2)}`;
@@ -568,7 +525,6 @@
                 let boxX = activePt.x + 10;
                 let boxY = activePt.y - 40;
                 
-                // Prevent tooltip from overflowing screen boundaries
                 if (boxX + textWidth > width - paddingRight) boxX = activePt.x - textWidth - 10;
                 if (boxY < paddingTop) boxY = activePt.y + 15;
 
@@ -587,17 +543,14 @@
                 ctx.fillText(timeOnly, boxX + 10, boxY + 32);
             }
 
-            ctx.restore(); // Remove clipping mask
+            ctx.restore(); 
 
-            // 7. Draw Increased Density X-Axis Timestamps (Static Overlay)
             ctx.fillStyle = '#8E8E93';
             ctx.textAlign = 'center';
             ctx.font = "600 11px 'Inter Tight'";
             
-            // Now renders exactly 7 evenly spaced timestamps
             const numLabels = 6; 
             for(let i = 0; i <= numLabels; i++) {
-                // Calculate which raw data index falls at this visual segment based on current pan/zoom
                 const visibleRatio = i / numLabels;
                 const targetScreenX = paddingLeft + (visibleRatio * graphWidth);
                 const targetDataRatio = ((targetScreenX - paddingLeft - state.offsetX) / state.scaleX) / graphWidth;
@@ -643,26 +596,17 @@
             let targetMinutes = 0;
             let isClosing = false;
             
-            if (day === 0) { 
-                targetDayOffset = 1; targetMinutes = marketOpen;
-            } else if (day === 6) { 
-                targetDayOffset = 2; targetMinutes = marketOpen;
-            } else { 
-                if (timeInMinutes < marketOpen) {
-                    targetDayOffset = 0; targetMinutes = marketOpen;
-                } else if (timeInMinutes >= marketOpen && timeInMinutes < marketClose) {
-                    targetDayOffset = 0; targetMinutes = marketClose; isClosing = true;
-                } else { 
-                    targetDayOffset = (day === 5) ? 3 : 1; targetMinutes = marketOpen;
-                }
+            if (day === 0) { targetDayOffset = 1; targetMinutes = marketOpen; } 
+            else if (day === 6) { targetDayOffset = 2; targetMinutes = marketOpen; } 
+            else { 
+                if (timeInMinutes < marketOpen) { targetDayOffset = 0; targetMinutes = marketOpen; } 
+                else if (timeInMinutes >= marketOpen && timeInMinutes < marketClose) { targetDayOffset = 0; targetMinutes = marketClose; isClosing = true; } 
+                else { targetDayOffset = (day === 5) ? 3 : 1; targetMinutes = marketOpen; }
             }
             
             let diffMinutes = 0;
-            if (targetDayOffset === 0) {
-                diffMinutes = targetMinutes - timeInMinutes;
-            } else {
-                diffMinutes = (24 * 60 - timeInMinutes) + ((targetDayOffset - 1) * 24 * 60) + targetMinutes;
-            }
+            if (targetDayOffset === 0) { diffMinutes = targetMinutes - timeInMinutes; } 
+            else { diffMinutes = (24 * 60 - timeInMinutes) + ((targetDayOffset - 1) * 24 * 60) + targetMinutes; }
             
             const totalHrs = Math.floor(diffMinutes / 60);
             const diffMins = diffMinutes % 60;
@@ -670,19 +614,12 @@
             const remainingHrs = totalHrs % 24;
             
             let timeString = "";
-            if (diffDays > 0) {
-                timeString = `${diffDays}d ${remainingHrs}h`;
-            } else if (remainingHrs > 0) {
-                timeString = `${remainingHrs}h ${diffMins}m`;
-            } else {
-                timeString = `${diffMins}m`;
-            }
+            if (diffDays > 0) { timeString = `${diffDays}d ${remainingHrs}h`; } 
+            else if (remainingHrs > 0) { timeString = `${remainingHrs}h ${diffMins}m`; } 
+            else { timeString = `${diffMins}m`; }
             
-            if (isClosing) {
-                DOM.countdown.innerText = `Market closes in ${timeString}`;
-            } else {
-                DOM.countdown.innerText = `Market opens in ${timeString}`;
-            }
+            if (isClosing) { DOM.countdown.innerText = `Market closes in ${timeString}`; } 
+            else { DOM.countdown.innerText = `Market opens in ${timeString}`; }
         }
 
         setInterval(updateClockAndStatus, 1000);
@@ -690,8 +627,8 @@
         updateClockAndStatus(); 
         
         setInterval(() => {
-            const isIntradayMode = (currentTimeMode === 'interval') || (currentTimeMode === 'range' && currentTimeValue === '1D');
-            if (isIntradayMode) fetchAndDrawNativeData();
+            const isMacroMode = (currentTimeMode === 'range' && currentTimeValue !== '1D');
+            if (!isMacroMode) fetchAndDrawNativeData();
         }, 60000);
     </script>
 </body>
