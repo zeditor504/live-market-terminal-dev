@@ -89,7 +89,8 @@ def fetch_macro_data(ticker):
     try:
         stock = yf.Ticker(ticker)
         for timeframe, config in macro_configs.items():
-            hist = stock.history(period=config["period"], interval=config["interval"], auto_adjust=False)
+            # FIXED: auto_adjust=True guarantees perfect historical split/dividend math mapping
+            hist = stock.history(period=config["period"], interval=config["interval"], auto_adjust=True)
             hist = hist.dropna(subset=['Close'])
 
             for timestamp, row in hist.iterrows():

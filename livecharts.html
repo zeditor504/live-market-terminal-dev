@@ -144,7 +144,7 @@
     </div>
 
     <div class="chart-wrapper">
-        <div id="chart-msg-overlay" class="chart-message">Connecting to Cloud Database...</div>
+        <div id="chart-msg-overlay" class="chart-message">Syncing Databases...</div>
         <canvas id="native-canvas-chart"></canvas>
     </div>
     
@@ -155,7 +155,6 @@
     </div>
 
     <script type="text/javascript">
-        // Dual-Database Routing Links
         const INTRADAY_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSMXRNvl_MWdY7TDj8bXruKqlFyoulqEc33XWZ1q5tY9rn2rdLSB6F-VqufSwtHup2eLvZwcBA3fX-j/pub?gid=1782241116&single=true&output=csv";
         const MACRO_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSMXRNvl_MWdY7TDj8bXruKqlFyoulqEc33XWZ1q5tY9rn2rdLSB6F-VqufSwtHup2eLvZwcBA3fX-j/pub?gid=1692149723&single=true&output=csv";
 
@@ -164,8 +163,17 @@
         let currentBrandColor = localStorage.getItem('savedBrandColor') || "#E31937";
         let currentTimeMode = localStorage.getItem('savedTimeMode') || "range"; 
         let currentTimeValue = localStorage.getItem('savedTimeValue') || "1D";
-
         const CHART_COLOR = "#2863fc"; 
+
+        // ==========================================
+        // LIGHTNING CACHE ENGINE
+        // ==========================================
+        // This permanently stores all CSV data in local RAM. 
+        // Zero network requests are made when toggling buttons.
+        let localMemoryDB = {
+            intraday: {}, 
+            macro: {}     
+        };
         
         let state = {
             points: [],
@@ -186,6 +194,61 @@
             msgOverlay: document.getElementById('chart-msg-overlay')
         };
 
+        // Network Bootloader: Fetches databases concurrently on page load
+        async function bootDataEngine() {
+            DOM.msgOverlay.innerText = "Syncing RAM Cache...";
+            DOM.msgOverlay.style.display = 'block';
+
+            try {
+                const [intraRes, macroRes] = await Promise.all([
+                    fetch(INTRADAY_CSV_URL + "&_t=" + Date.now()),
+                    fetch(MACRO_CSV_URL + "&_t=" + Date.now())
+                ]);
+
+                const intraText = await intraRes.text();
+                const macroText = await macroRes.text();
+
+                parseToMemory(intraText, true);
+                parseToMemory(macroText, false);
+
+                DOM.msgOverlay.style.display = 'none';
+                loadChartFromMemory(); // Instantly draw the active selection
+                
+            } catch (err) {
+                console.error("Database sync failed:", err);
+                DOM.msgOverlay.innerText = "Database connection offline.";
+            }
+        }
+
+        // Extremely fast, single-pass RAM parser
+        function parseToMemory(csvText, isIntraday) {
+            const lines = csvText.split(/\r?\n/);
+            for(let i = 1; i < lines.length; i++) {
+                const cols = lines[i].split(',');
+                if (isIntraday && cols.length >= 3) {
+                    const symbol = cols[1].replace(/['"]/g, '').trim();
+                    const dtStr = cols[0].replace(/['"]/g, '').trim();
+                    const price = parseFloat(cols[2]);
+                    
+                    if (!isNaN(price)) {
+                        if(!localMemoryDB.intraday[symbol]) localMemoryDB.intraday[symbol] = [];
+                        localMemoryDB.intraday[symbol].push({ timeStr: dtStr, price: price });
+                    }
+                } else if (!isIntraday && cols.length >= 4) {
+                    const symbol = cols[1].replace(/['"]/g, '').trim();
+                    const timeframe = cols[2].replace(/['"]/g, '').trim();
+                    const dtStr = cols[0].replace(/['"]/g, '').trim();
+                    const price = parseFloat(cols[3]);
+                    
+                    if (!isNaN(price)) {
+                        if(!localMemoryDB.macro[symbol]) localMemoryDB.macro[symbol] = {};
+                        if(!localMemoryDB.macro[symbol][timeframe]) localMemoryDB.macro[symbol][timeframe] = [];
+                        localMemoryDB.macro[symbol][timeframe].push({ timeStr: dtStr, price: price });
+                    }
+                }
+            }
+        }
+
         function setSymbol(symbolCode, symbolName, brandColor, clickedButton) {
             if (clickedButton) {
                 document.querySelectorAll('.symbol-btn').forEach(btn => btn.classList.remove('active'));
@@ -203,7 +266,8 @@
             DOM.title.style.color = brandColor;
             DOM.title.style.textShadow = `0px 0px 12.5px ${brandColor}66`;
             
-            renderChart();
+            resetPanZoom();
+            loadChartFromMemory(); // 0ms lag execution
         }
 
         function setTime(mode, value, clickedButton) {
@@ -217,10 +281,14 @@
             localStorage.setItem('savedTimeMode', mode);
             localStorage.setItem('savedTimeValue', value);
             
+            resetPanZoom();
+            loadChartFromMemory(); // 0ms lag execution
+        }
+
+        function resetPanZoom() {
             state.scaleX = 1;
             state.offsetX = 0;
-            
-            renderChart();
+            state.hoverIndex = -1;
         }
 
         function initializeTerminal() {
@@ -241,97 +309,55 @@
             DOM.title.innerText = currentTicker;
             window.addEventListener('resize', () => { if(state.points.length > 0) renderCanvas(); });
             setupCanvasInteractions();
-            renderChart();
+            bootDataEngine(); // Fire the parallel network bootloader
         }
 
-        function renderChart() {
-            state.points = [];
-            state.scaleX = 1;
-            state.offsetX = 0;
-            state.hoverIndex = -1;
-            clearCanvas();
-            fetchAndDrawNativeData();
-        }
-
-        async function fetchAndDrawNativeData() {
+        // Native 0-Latency Array Mapper
+        function loadChartFromMemory() {
             const isMacroMode = (currentTimeMode === 'range' && currentTimeValue !== '1D');
-            const targetUrl = isMacroMode ? MACRO_CSV_URL : INTRADAY_CSV_URL;
+            let coords = [];
 
-            DOM.msgOverlay.innerText = "Connecting to Cloud Database...";
-            DOM.msgOverlay.style.display = 'block';
-            
-            try {
-                const res = await fetch(targetUrl + "&_t=" + Date.now());
-                const text = await res.text();
-                
-                const lines = text.split(/\r?\n/);
-                let coords = [];
-                
-                for(let i = 1; i < lines.length; i++) {
-                    const columns = lines[i].split(',');
-                    
-                    if (isMacroMode) {
-                        if (columns.length < 4) continue;
-                        const symbol = columns[1].replace(/['"]/g, '').trim();
-                        const timeframe = columns[2].replace(/['"]/g, '').trim();
-                        
-                        if (symbol === currentTicker && timeframe === currentTimeValue) {
-                            const datetimeStr = columns[0].replace(/['"]/g, '').trim();
-                            const price = parseFloat(columns[3]);
-                            if (!isNaN(price)) coords.push({ timeStr: datetimeStr, price: price });
-                        }
-                    } else {
-                        if (columns.length < 3) continue;
-                        const symbol = columns[1].replace(/['"]/g, '').trim();
-                        
-                        if (symbol === currentTicker) {
-                            const datetimeStr = columns[0].replace(/['"]/g, '').trim();
-                            const price = parseFloat(columns[2]);
-                            if (!isNaN(price)) coords.push({ timeStr: datetimeStr, price: price });
+            if (isMacroMode) {
+                if(localMemoryDB.macro[currentTicker] && localMemoryDB.macro[currentTicker][currentTimeValue]) {
+                    coords = [...localMemoryDB.macro[currentTicker][currentTimeValue]];
+                }
+            } else {
+                if(localMemoryDB.intraday[currentTicker]) {
+                    coords = [...localMemoryDB.intraday[currentTicker]];
+                    if (currentTimeMode === 'interval') {
+                        const step = parseInt(currentTimeValue);
+                        if (step > 1) {
+                            coords = coords.filter((_, idx) => idx % step === 0);
                         }
                     }
                 }
-                
-                if (coords.length === 0) {
-                    DOM.msgOverlay.innerText = `No ${isMacroMode ? currentTimeValue : 'live'} data found for ${currentTicker}.`;
-                    clearCanvas();
-                    return;
-                }
-                
-                // Interval Downsampling for Intraday (e.g. 5m, 15m)
-                if (!isMacroMode && currentTimeMode === 'interval') {
-                    const step = parseInt(currentTimeValue);
-                    if (step > 1) {
-                        coords = coords.filter((_, idx) => idx % step === 0);
-                    }
-                }
-                
-                DOM.msgOverlay.style.display = 'none';
-                state.points = coords;
-                renderCanvas();
-                
-            } catch (err) {
-                console.error(err);
-                DOM.msgOverlay.innerText = "Database connection offline. Retrying...";
             }
+
+            if (coords.length === 0) {
+                DOM.msgOverlay.innerText = `No ${isMacroMode ? currentTimeValue : 'live'} data found for ${currentTicker}.`;
+                DOM.msgOverlay.style.display = 'block';
+                clearCanvas();
+                state.points = [];
+                return;
+            }
+
+            DOM.msgOverlay.style.display = 'none';
+            state.points = coords;
+            renderCanvas();
         }
 
-        // --- Data String Formatting Utilities ---
         function formatTimeString(timeStr) {
             const isMacroMode = (currentTimeMode === 'range' && currentTimeValue !== '1D');
-            const parts = timeStr.split(' '); // Expected: "YYYY-MM-DD HH:MM:SS"
+            const parts = timeStr.split(' ');
             
             if (!isMacroMode) {
-                // Intraday: "09:30"
                 return parts[1] ? parts[1].substring(0, 5) : timeStr;
             } else if (currentTimeValue === '5D' || currentTimeValue === '1M') {
-                // Week / Month: "06/12 09:30"
                 if (parts.length > 1) {
                     const dateParts = parts[0].split('-');
                     return `${dateParts[1]}/${dateParts[2]} ${parts[1].substring(0,5)}`;
                 }
             } else {
-                // YTD / Max: "2026-06-12"
                 return parts[0];
             }
             return timeStr;
@@ -349,7 +375,7 @@
                 
                 state.scaleX *= zoomFactor;
                 if (state.scaleX < 1) state.scaleX = 1; 
-                if (state.scaleX > 30) state.scaleX = 30; // Increased max zoom for dense macro arrays
+                if (state.scaleX > 30) state.scaleX = 30; 
                 
                 const rect = cvs.getBoundingClientRect();
                 const mouseX = e.clientX - rect.left - 20; 
@@ -657,8 +683,9 @@
         initializeTerminal();
         updateClockAndStatus(); 
         
+        // Background refresh to keep memory arrays perfectly updated
         setInterval(() => {
-            fetchAndDrawNativeData();
+            bootDataEngine();
         }, 60000);
     </script>
 </body>
