@@ -215,10 +215,13 @@
 
             liveSocket.addEventListener('message', function (event) {
                 const response = JSON.parse(event.data);
+                
                 if (response.type === 'trade') {
                     const now = Date.now();
+                    
                     if (now - lastTickTime > 1000) {
                         lastTickTime = now;
+                        
                         const currentPrice = response.data[0].p;
                         const tradeVolume = response.data[0].v;
                         const dateObj = new Date(response.data[0].t);
@@ -228,12 +231,30 @@
                         const dtStr = localTime.toISOString().replace('T', ' ').substring(0, 19);
 
                         if (!localMemoryDB.intraday[ticker]) localMemoryDB.intraday[ticker] = [];
-                        
-                        localMemoryDB.intraday[ticker].push({ 
-                            timeStr: dtStr, 
-                            price: currentPrice,
-                            volume: tradeVolume
-                        });
+                        let intradayArray = localMemoryDB.intraday[ticker];
+
+                        if (intradayArray.length > 0) {
+                            let lastPoint = intradayArray[intradayArray.length - 1];
+                            // Extract just the YYYY-MM-DD HH:MM to group by the minute
+                            let currentMinute = dtStr.substring(0, 16);
+                            let lastMinute = lastPoint.timeStr.substring(0, 16);
+
+                            if (currentMinute === lastMinute) {
+                                // Accumulate the volume and update the closing price for the current minute
+                                lastPoint.price = currentPrice;
+                                lastPoint.volume += tradeVolume;
+                                lastPoint.timeStr = dtStr; // Updates the tooltip to the exact second
+                            } else {
+                                // A new minute has started, push a brand new bar
+                                intradayArray.push({
+                                    timeStr: dtStr,
+                                    price: currentPrice,
+                                    volume: tradeVolume
+                                });
+                            }
+                        } else {
+                            intradayArray.push({ timeStr: dtStr, price: currentPrice, volume: tradeVolume });
+                        }
 
                         const isMacroMode = (currentTimeMode === 'range' && currentTimeValue !== '1D');
                         if (!isMacroMode) {
