@@ -7,7 +7,8 @@
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;600&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+    <!-- Reverted back to purely Inter Tight -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;600&display=swap" rel="stylesheet">
     
     <style>
         body { 
@@ -92,8 +93,8 @@
         }
         .chart-footer > div { flex: 1; }
         
-        #live-clock { text-align: left; color: #FFFFFF; font-family: 'JetBrains Mono', monospace; font-weight: 600; font-size: 0.9rem; }
-        #market-countdown { text-align: center; color: #FFFFFF; font-family: 'JetBrains Mono', monospace; font-weight: 600; font-size: 0.9rem; } 
+        #live-clock { text-align: left; color: #FFFFFF; font-weight: 600; }
+        #market-countdown { text-align: center; color: #FFFFFF; font-weight: 600; } 
         .chart-footer > div:last-child { text-align: right; color: #FFFFFF; font-weight: 600; }
 
         @media (max-width: 800px) {
@@ -165,16 +166,30 @@
         let currentTimeValue = localStorage.getItem('savedTimeValue') || "1D";
         const CHART_COLOR = "#2863fc"; 
 
-        // ==========================================
-        // LIGHTNING CACHE ENGINE
-        // ==========================================
-        // This permanently stores all CSV data in local RAM. 
-        // Zero network requests are made when toggling buttons.
         let localMemoryDB = {
             intraday: {}, 
             macro: {}     
         };
         
+        let state = {
+            points: [],
+            scaleX: 1,
+            offsetX: 0,
+            isDragging: false,
+            startX: 0,
+            hoverIndex: -1,
+            hoverPos: null
+        };
+
+        const DOM = {
+            clock: document.getElementById('live-clock'),
+            countdown: document.getElementById('market-countdown'),
+            status: document.getElementById('market-status'),
+            title: document.getElementById('stock-title'),
+            canvas: document.getElementById('native-canvas-chart'),
+            msgOverlay: document.getElementById('chart-msg-overlay')
+        };
+
         // ==========================================
         // REAL-TIME WEBSOCKET ENGINE
         // ==========================================
@@ -182,7 +197,6 @@
         let lastTickTime = 0;
 
         function connectLiveStream(ticker) {
-            // Close the existing tunnel if you click a different stock
             if (liveSocket) {
                 liveSocket.send(JSON.stringify({'type':'unsubscribe', 'symbol': currentTicker}));
                 liveSocket.close();
@@ -203,19 +217,16 @@
                 if (response.type === 'trade') {
                     const now = Date.now();
                     
-                    // Throttle: Only process a tick every 1000ms to maintain 60FPS canvas performance
                     if (now - lastTickTime > 1000) {
                         lastTickTime = now;
                         
                         const currentPrice = response.data[0].p;
                         const dateObj = new Date(response.data[0].t);
                         
-                        // Format to match your Python backend string (YYYY-MM-DD HH:MM:SS)
                         const offset = dateObj.getTimezoneOffset() * 60000;
                         const localTime = new Date(dateObj.getTime() - offset);
                         const dtStr = localTime.toISOString().replace('T', ' ').substring(0, 19);
 
-                        // Inject the live coordinate directly into your RAM Cache
                         if (!localMemoryDB.intraday[ticker]) localMemoryDB.intraday[ticker] = [];
                         
                         localMemoryDB.intraday[ticker].push({ 
@@ -223,7 +234,6 @@
                             price: currentPrice 
                         });
 
-                        // Instantly redraw the canvas if you are on an intraday view
                         const isMacroMode = (currentTimeMode === 'range' && currentTimeValue !== '1D');
                         if (!isMacroMode) {
                             loadChartFromMemory();
@@ -233,26 +243,6 @@
             });
         }
 
-        let state = {
-            points: [],
-            scaleX: 1,
-            offsetX: 0,
-            isDragging: false,
-            startX: 0,
-            hoverIndex: -1,
-            hoverPos: null
-        };
-
-        const DOM = {
-            clock: document.getElementById('live-clock'),
-            countdown: document.getElementById('market-countdown'),
-            status: document.getElementById('market-status'),
-            title: document.getElementById('stock-title'),
-            canvas: document.getElementById('native-canvas-chart'),
-            msgOverlay: document.getElementById('chart-msg-overlay')
-        };
-
-        // Network Bootloader: Fetches databases concurrently on page load
         async function bootDataEngine() {
             DOM.msgOverlay.innerText = "Syncing RAM Cache...";
             DOM.msgOverlay.style.display = 'block';
@@ -266,7 +256,7 @@
                 const intraText = await intraRes.text();
                 const macroText = await macroRes.text();
 
-                // THE FIX: Flush the memory arrays completely clean before appending the refreshed data
+                // Memory leak fix: Flushes old data cleanly before updating
                 localMemoryDB.intraday = {};
                 localMemoryDB.macro = {};
 
@@ -274,7 +264,7 @@
                 parseToMemory(macroText, false);
 
                 DOM.msgOverlay.style.display = 'none';
-                loadChartFromMemory(); // Instantly draw the active selection
+                loadChartFromMemory(); 
                 
             } catch (err) {
                 console.error("Database sync failed:", err);
@@ -282,7 +272,6 @@
             }
         }
 
-        // Extremely fast, single-pass RAM parser
         function parseToMemory(csvText, isIntraday) {
             const lines = csvText.split(/\r?\n/);
             for(let i = 1; i < lines.length; i++) {
@@ -329,7 +318,7 @@
             DOM.title.style.textShadow = `0px 0px 12.5px ${brandColor}66`;
             
             resetPanZoom();
-            loadChartFromMemory(); // 0ms lag execution
+            loadChartFromMemory(); 
             connectLiveStream(symbolName);
         }
 
@@ -345,7 +334,7 @@
             localStorage.setItem('savedTimeValue', value);
             
             resetPanZoom();
-            loadChartFromMemory(); // 0ms lag execution
+            loadChartFromMemory(); 
         }
 
         function resetPanZoom() {
@@ -372,11 +361,10 @@
             DOM.title.innerText = currentTicker;
             window.addEventListener('resize', () => { if(state.points.length > 0) renderCanvas(); });
             setupCanvasInteractions();
-            bootDataEngine(); // Fire the parallel network bootloader
+            bootDataEngine(); 
             connectLiveStream(currentTicker);
         }
 
-        // Native 0-Latency Array Mapper
         function loadChartFromMemory() {
             const isMacroMode = (currentTimeMode === 'range' && currentTimeValue !== '1D');
             let coords = [];
@@ -558,7 +546,7 @@
             ctx.strokeStyle = '#1C1C1E';
             ctx.lineWidth = 1;
             ctx.fillStyle = '#8E8E93';
-            ctx.font = "600 11px 'JetBrains Mono', monospace";
+            ctx.font = "600 11px 'Inter Tight'";
             ctx.textAlign = 'left';
             
             const gridLines = 4;
@@ -641,7 +629,7 @@
                 const timeLabel = formatTimeString(activeData.timeStr);
                 const priceText = `$${activeData.price.toFixed(2)}`;
                 
-                ctx.font = "600 12px 'JetBrains Mono', monospace";
+                ctx.font = "600 12px 'Inter Tight'";
                 const textWidth = Math.max(ctx.measureText(priceText).width, ctx.measureText(timeLabel).width) + 20;
                 
                 let boxX = activePt.x + 10;
@@ -661,7 +649,7 @@
                 ctx.textAlign = 'left';
                 ctx.fillText(priceText, boxX + 10, boxY + 16);
                 ctx.fillStyle = '#8E8E93';
-                ctx.font = "400 11px 'JetBrains Mono', monospace";
+                ctx.font = "400 11px 'Inter Tight'";
                 ctx.fillText(timeLabel, boxX + 10, boxY + 32);
             }
 
@@ -669,7 +657,7 @@
 
             ctx.fillStyle = '#8E8E93';
             ctx.textAlign = 'center';
-            ctx.font = "600 11px 'JetBrains Mono', monospace";
+            ctx.font = "600 11px 'Inter Tight'";
             
             const numLabels = 6; 
             for(let i = 0; i <= numLabels; i++) {
@@ -747,7 +735,6 @@
         initializeTerminal();
         updateClockAndStatus(); 
         
-        // Background refresh to keep memory arrays perfectly updated
         setInterval(() => {
             bootDataEngine();
         }, 60000);
