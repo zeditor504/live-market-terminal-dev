@@ -84,13 +84,13 @@ def fetch_intraday_data(ticker):
 def fetch_macro_data(ticker):
     """
     Isolated worker to fetch historical arrays for Week, Month, YTD, and Max.
-    Aggressively downsamples older data to prevent canvas rendering lag.
+    Max timeframe upgraded to 1-Day intervals for absolute historical fidelity.
     """
     macro_configs = {
         "5D": {"period": "5d", "interval": "15m"},
         "1M": {"period": "1mo", "interval": "1h"},
         "YTD": {"period": "ytd", "interval": "1d"},
-        "ALL": {"period": "max", "interval": "1wk"}
+        "ALL": {"period": "max", "interval": "1d"}  # Upgraded from 1wk to 1d
     }
 
     all_rows = []
