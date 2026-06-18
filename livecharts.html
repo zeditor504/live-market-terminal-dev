@@ -165,8 +165,8 @@
         let currentTimeValue = localStorage.getItem('savedTimeValue') || "1D";
         
         const CHART_COLOR = "#2863fc"; 
-        const COLOR_DEMAND = "#e95448"; // Upward Price Move
-        const COLOR_SUPPLY = "#30998b"; // Downward Price Move
+        const COLOR_DEMAND = "#e95448"; 
+        const COLOR_SUPPLY = "#30998b"; 
 
         let localMemoryDB = {
             intraday: {}, 
@@ -204,11 +204,13 @@
                 liveSocket.close();
             }
 
-            const API_KEY = "YOUR_FINNHUB_KEY"; 
+            // REMINDER: Paste your Finnhub Key right here!
+            const API_KEY = "d8ppadpr01qqd60jn7o0d8ppadpr01qqd60jn7og"; 
             liveSocket = new WebSocket(`wss://ws.finnhub.io?token=${API_KEY}`);
 
             liveSocket.addEventListener('open', function (event) {
                 liveSocket.send(JSON.stringify({'type':'subscribe', 'symbol': ticker}));
+                console.log(`📡 Live Tick Stream Connected: ${ticker}`);
             });
 
             liveSocket.addEventListener('message', function (event) {
@@ -270,7 +272,6 @@
             }
         }
 
-        // Updated parser to extract the new Volume data mapped from your Python script
         function parseToMemory(csvText, isIntraday) {
             const lines = csvText.split(/\r?\n/);
             for(let i = 1; i < lines.length; i++) {
@@ -399,12 +400,21 @@
             renderCanvas();
         }
 
-        function formatTimeString(timeStr) {
+        // ==========================================
+        // DYNAMIC TIMESTAMP ENGINE (WITH DATE SUPPORT)
+        // ==========================================
+        function formatTimeString(timeStr, isAxis = false) {
             const isMacroMode = (currentTimeMode === 'range' && currentTimeValue !== '1D');
             const parts = timeStr.split(' ');
             
             if (!isMacroMode) {
-                return parts[1] ? parts[1].substring(0, 5) : timeStr;
+                if (parts.length > 1) {
+                    if (isAxis) return parts[1].substring(0, 5); // Bottom Axis: "09:30"
+                    // Hover Tooltip: Extracted Date + Time
+                    const dateParts = parts[0].split('-');
+                    return `${dateParts[1]}/${dateParts[2]}/${dateParts[0]} ${parts[1].substring(0,5)}`; 
+                }
+                return timeStr;
             } else if (currentTimeValue === '5D' || currentTimeValue === '1M') {
                 if (parts.length > 1) {
                     const dateParts = parts[0].split('-');
@@ -591,12 +601,9 @@
             ctx.rect(paddingLeft, paddingTop, graphWidth, graphHeight);
             ctx.clip();
 
-            // =========================================================================
-            // VOLUME HISTOGRAM ENGINE (DEMAND & SUPPLY)
-            // =========================================================================
             const volumes = state.points.map(p => p.volume || 0);
             const maxVolume = Math.max(...volumes, 1);
-            const maxVolHeight = graphHeight * 0.25; // Allocates the bottom 25% for Volume Bars
+            const maxVolHeight = graphHeight * 0.25; 
             const barWidth = Math.max(1, (graphWidth / state.points.length) * state.scaleX * 0.6);
 
             for(let i = 0; i < visibleCoords.length; i++) {
@@ -604,7 +611,6 @@
                 const rawIdx = pt.rawIdx;
                 const currentData = state.points[rawIdx];
                 
-                // Color Logic mapped to User Rules: Demand = Red, Supply = Green
                 let isDemand = true; 
                 if (rawIdx > 0) {
                     isDemand = currentData.price >= state.points[rawIdx - 1].price;
@@ -614,14 +620,11 @@
                 const barY = paddingTop + graphHeight - volHeight;
 
                 ctx.fillStyle = isDemand ? COLOR_DEMAND : COLOR_SUPPLY;
-                ctx.globalAlpha = 0.4; // Slightly transparent so the price line remains dominant
+                ctx.globalAlpha = 0.4; 
                 ctx.fillRect(pt.x - (barWidth / 2), barY, barWidth, volHeight);
             }
             ctx.globalAlpha = 1.0;
 
-            // =========================================================================
-            // PRIMARY PRICE TRENDLINE 
-            // =========================================================================
             ctx.beginPath();
             ctx.moveTo(visibleCoords[0].x, paddingTop + graphHeight);
             for(const pt of visibleCoords) {
@@ -647,7 +650,7 @@
             ctx.lineCap = 'round';
             ctx.stroke();
 
-            // Hover Tooltips
+            // Hover Tooltips with New Date Formatting Logic
             if (state.hoverIndex !== -1 && renderCoords[state.hoverIndex]) {
                 const activePt = renderCoords[state.hoverIndex];
                 
@@ -669,7 +672,7 @@
                 ctx.stroke();
 
                 const activeData = state.points[state.hoverIndex];
-                const timeLabel = formatTimeString(activeData.timeStr);
+                const timeLabel = formatTimeString(activeData.timeStr, false); // false = Return Full Tooltip Date
                 const priceText = `$${activeData.price.toFixed(2)}`;
                 
                 ctx.font = "600 12px 'Inter Tight'";
@@ -711,7 +714,7 @@
                 let dataIdx = Math.round(targetDataRatio * (state.points.length - 1));
                 
                 if (dataIdx >= 0 && dataIdx < state.points.length) {
-                    const timeLabel = formatTimeString(state.points[dataIdx].timeStr);
+                    const timeLabel = formatTimeString(state.points[dataIdx].timeStr, true); // true = Return Short X-Axis Text
                     ctx.fillText(timeLabel, targetScreenX, height - 10);
                 }
             }
@@ -777,10 +780,6 @@
         setInterval(updateClockAndStatus, 1000);
         initializeTerminal();
         updateClockAndStatus(); 
-        
-        setInterval(() => {
-            bootDataEngine();
-        }, 60000);
     </script>
 </body>
 </html>
