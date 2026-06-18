@@ -11,7 +11,6 @@ def fetch_ticker_data(ticker):
     try:
         stock = yf.Ticker(ticker)
         
-        # Tap directly into the live consolidated tape for literal penny-accuracy
         exact_current_price = round(float(stock.fast_info['last_price']), 2)
         previous_price = round(float(stock.fast_info['previous_close']), 2)
         
@@ -59,9 +58,8 @@ def fetch_ticker_data(ticker):
 def fetch_intraday_data(ticker):
     try:
         stock = yf.Ticker(ticker)
-        
-        # Pull exact tape price to overwrite aggregate drift
         exact_price = round(float(stock.fast_info['last_price']), 2)
+        exact_volume = stock.fast_info.get('last_volume', 0)
         
         hist = stock.history(period="1d", interval="1m", auto_adjust=False)
         hist = hist.dropna(subset=['Close'])
@@ -70,11 +68,14 @@ def fetch_intraday_data(ticker):
         for timestamp, row in hist.iterrows():
             dt_str = timestamp.strftime('%Y-%m-%d %H:%M:%S')
             price = round(float(row['Close']), 2)
-            rows.append([dt_str, ticker, price])
+            volume = int(row['Volume']) if pd.notna(row['Volume']) else 0
+            # Added Volume column
+            rows.append([dt_str, ticker, price, volume])
             
-        # Force the final coordinate of the array to exactly match the official live/close print
         if rows:
             rows[-1][2] = exact_price
+            if exact_volume:
+                rows[-1][3] = int(exact_volume)
             
         return rows, None
         
@@ -82,15 +83,11 @@ def fetch_intraday_data(ticker):
         return None, f"  [X] Intraday data failure for {ticker}: {e}"
 
 def fetch_macro_data(ticker):
-    """
-    Isolated worker to fetch historical arrays for Week, Month, YTD, and Max.
-    Max timeframe upgraded to 1-Day intervals for absolute historical fidelity.
-    """
     macro_configs = {
         "5D": {"period": "5d", "interval": "15m"},
         "1M": {"period": "1mo", "interval": "1h"},
         "YTD": {"period": "ytd", "interval": "1d"},
-        "ALL": {"period": "max", "interval": "1d"}  # Upgraded from 1wk to 1d
+        "ALL": {"period": "max", "interval": "1d"}
     }
 
     all_rows = []
@@ -106,9 +103,10 @@ def fetch_macro_data(ticker):
             for timestamp, row in hist.iterrows():
                 dt_str = timestamp.strftime('%Y-%m-%d %H:%M:%S')
                 price = round(float(row['Close']), 2)
-                timeframe_rows.append([dt_str, ticker, timeframe, price])
+                volume = int(row['Volume']) if pd.notna(row['Volume']) else 0
+                # Added Volume column
+                timeframe_rows.append([dt_str, ticker, timeframe, price, volume])
 
-            # Force the final coordinate of each macro array to match the official live/close print
             if timeframe_rows:
                 timeframe_rows[-1][3] = exact_price
                 
@@ -189,7 +187,8 @@ def main():
         print("\nInitiating Intraday Data Pipeline...")
         try:
             intraday_sheet = client.open("Daily Market Data").worksheet("Intraday")
-            intraday_rows = [["Datetime", "Symbol", "Price"]]
+            # Added Volume Header
+            intraday_rows = [["Datetime", "Symbol", "Price", "Volume"]]
             
             with concurrent.futures.ThreadPoolExecutor(max_workers=len(tickers)) as executor:
                 future_to_ticker = {executor.submit(fetch_intraday_data, ticker): ticker for ticker in tickers}
@@ -210,7 +209,8 @@ def main():
         print("\nInitiating Macro Historical Data Pipeline...")
         try:
             macro_sheet = client.open("Daily Market Data").worksheet("MacroHistory")
-            macro_rows = [["Datetime", "Symbol", "Timeframe", "Price"]]
+            # Added Volume Header
+            macro_rows = [["Datetime", "Symbol", "Timeframe", "Price", "Volume"]]
             
             with concurrent.futures.ThreadPoolExecutor(max_workers=len(tickers)) as executor:
                 future_to_ticker = {executor.submit(fetch_macro_data, ticker): ticker for ticker in tickers}
@@ -228,7 +228,7 @@ def main():
             else:
                 print("[!] Warning: No macro data collected.")
         except Exception as e:
-            print(f"❌ Macro error. Did you create the 'MacroHistory' tab? Details: {e}")
+            print(f"❌ Macro error. Details: {e}")
 
     except Exception as e:
         print("\n" + "="*60 + "\nCRITICAL SCRIPT FAILURE\n" + "="*60)

@@ -163,7 +163,10 @@
         let currentBrandColor = localStorage.getItem('savedBrandColor') || "#E31937";
         let currentTimeMode = localStorage.getItem('savedTimeMode') || "range"; 
         let currentTimeValue = localStorage.getItem('savedTimeValue') || "1D";
+        
         const CHART_COLOR = "#2863fc"; 
+        const COLOR_DEMAND = "#e95448"; // Upward Price Move
+        const COLOR_SUPPLY = "#30998b"; // Downward Price Move
 
         let localMemoryDB = {
             intraday: {}, 
@@ -201,25 +204,21 @@
                 liveSocket.close();
             }
 
-            // PASTE YOUR FINNHUB KEY HERE
             const API_KEY = "YOUR_FINNHUB_KEY"; 
             liveSocket = new WebSocket(`wss://ws.finnhub.io?token=${API_KEY}`);
 
             liveSocket.addEventListener('open', function (event) {
                 liveSocket.send(JSON.stringify({'type':'subscribe', 'symbol': ticker}));
-                console.log(`📡 Live Tick Stream Connected: ${ticker}`);
             });
 
             liveSocket.addEventListener('message', function (event) {
                 const response = JSON.parse(event.data);
-                
                 if (response.type === 'trade') {
                     const now = Date.now();
-                    
                     if (now - lastTickTime > 1000) {
                         lastTickTime = now;
-                        
                         const currentPrice = response.data[0].p;
+                        const tradeVolume = response.data[0].v;
                         const dateObj = new Date(response.data[0].t);
                         
                         const offset = dateObj.getTimezoneOffset() * 60000;
@@ -230,7 +229,8 @@
                         
                         localMemoryDB.intraday[ticker].push({ 
                             timeStr: dtStr, 
-                            price: currentPrice 
+                            price: currentPrice,
+                            volume: tradeVolume
                         });
 
                         const isMacroMode = (currentTimeMode === 'range' && currentTimeValue !== '1D');
@@ -270,6 +270,7 @@
             }
         }
 
+        // Updated parser to extract the new Volume data mapped from your Python script
         function parseToMemory(csvText, isIntraday) {
             const lines = csvText.split(/\r?\n/);
             for(let i = 1; i < lines.length; i++) {
@@ -278,21 +279,23 @@
                     const symbol = cols[1].replace(/['"]/g, '').trim();
                     const dtStr = cols[0].replace(/['"]/g, '').trim();
                     const price = parseFloat(cols[2]);
+                    const volume = cols.length >= 4 ? parseFloat(cols[3]) || 0 : 0;
                     
                     if (!isNaN(price)) {
                         if(!localMemoryDB.intraday[symbol]) localMemoryDB.intraday[symbol] = [];
-                        localMemoryDB.intraday[symbol].push({ timeStr: dtStr, price: price });
+                        localMemoryDB.intraday[symbol].push({ timeStr: dtStr, price: price, volume: volume });
                     }
                 } else if (!isIntraday && cols.length >= 4) {
                     const symbol = cols[1].replace(/['"]/g, '').trim();
                     const timeframe = cols[2].replace(/['"]/g, '').trim();
                     const dtStr = cols[0].replace(/['"]/g, '').trim();
                     const price = parseFloat(cols[3]);
+                    const volume = cols.length >= 5 ? parseFloat(cols[4]) || 0 : 0;
                     
                     if (!isNaN(price)) {
                         if(!localMemoryDB.macro[symbol]) localMemoryDB.macro[symbol] = {};
                         if(!localMemoryDB.macro[symbol][timeframe]) localMemoryDB.macro[symbol][timeframe] = [];
-                        localMemoryDB.macro[symbol][timeframe].push({ timeStr: dtStr, price: price });
+                        localMemoryDB.macro[symbol][timeframe].push({ timeStr: dtStr, price: price, volume: volume });
                     }
                 }
             }
@@ -530,13 +533,10 @@
             const paddingTop = 20;
             const paddingLeft = 20;
             
-            // =========================================================================
-            // PRICE BOUNDARY ENGINE (FLOORED AT $0.00)
-            // =========================================================================
             const prices = state.points.map(p => p.price);
             const rawMax = Math.max(...prices);
             const rawMin = Math.min(...prices);
-
+            
             let maxPrice, minPrice;
             if (rawMax === rawMin) {
                 maxPrice = rawMax * 1.05;
@@ -544,10 +544,9 @@
             } else {
                 const rangePadding = (rawMax - rawMin) * 0.12; 
                 maxPrice = rawMax + rangePadding;
-                // Math.max guarantees the chart floor clamps perfectly at 0 if padding goes negative
                 minPrice = Math.max(0, rawMin - rangePadding); 
             }
-            const priceRange = maxPrice - minPrice; 
+            const priceRange = maxPrice - minPrice;
             
             const graphWidth = width - paddingLeft - paddingRight;
             const graphHeight = height - paddingTop - paddingBottom;
@@ -592,6 +591,37 @@
             ctx.rect(paddingLeft, paddingTop, graphWidth, graphHeight);
             ctx.clip();
 
+            // =========================================================================
+            // VOLUME HISTOGRAM ENGINE (DEMAND & SUPPLY)
+            // =========================================================================
+            const volumes = state.points.map(p => p.volume || 0);
+            const maxVolume = Math.max(...volumes, 1);
+            const maxVolHeight = graphHeight * 0.25; // Allocates the bottom 25% for Volume Bars
+            const barWidth = Math.max(1, (graphWidth / state.points.length) * state.scaleX * 0.6);
+
+            for(let i = 0; i < visibleCoords.length; i++) {
+                const pt = visibleCoords[i];
+                const rawIdx = pt.rawIdx;
+                const currentData = state.points[rawIdx];
+                
+                // Color Logic mapped to User Rules: Demand = Red, Supply = Green
+                let isDemand = true; 
+                if (rawIdx > 0) {
+                    isDemand = currentData.price >= state.points[rawIdx - 1].price;
+                }
+
+                const volHeight = (currentData.volume / maxVolume) * maxVolHeight;
+                const barY = paddingTop + graphHeight - volHeight;
+
+                ctx.fillStyle = isDemand ? COLOR_DEMAND : COLOR_SUPPLY;
+                ctx.globalAlpha = 0.4; // Slightly transparent so the price line remains dominant
+                ctx.fillRect(pt.x - (barWidth / 2), barY, barWidth, volHeight);
+            }
+            ctx.globalAlpha = 1.0;
+
+            // =========================================================================
+            // PRIMARY PRICE TRENDLINE 
+            // =========================================================================
             ctx.beginPath();
             ctx.moveTo(visibleCoords[0].x, paddingTop + graphHeight);
             for(const pt of visibleCoords) {
@@ -617,6 +647,7 @@
             ctx.lineCap = 'round';
             ctx.stroke();
 
+            // Hover Tooltips
             if (state.hoverIndex !== -1 && renderCoords[state.hoverIndex]) {
                 const activePt = renderCoords[state.hoverIndex];
                 
