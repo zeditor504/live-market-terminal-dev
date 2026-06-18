@@ -208,6 +208,10 @@
                 const intraText = await intraRes.text();
                 const macroText = await macroRes.text();
 
+                // THE FIX: Flush the memory arrays completely clean before appending the refreshed data
+                localMemoryDB.intraday = {};
+                localMemoryDB.macro = {};
+
                 parseToMemory(intraText, true);
                 parseToMemory(macroText, false);
 
