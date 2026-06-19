@@ -66,7 +66,6 @@
             box-shadow: 0 0 12.5px var(--brand-color);
         }
 
-        /* Flexbox Core Layout */
         .main-content {
             display: flex;
             width: 95vw; 
@@ -102,7 +101,6 @@
             color: #8E8E93; font-weight: 600; font-size: 1.1rem; display: none; pointer-events: none;
         }
 
-        /* Robinhood-Style Side Panel CSS */
         .side-panel {
             width: 300px;
             background-color: #111111;
@@ -114,44 +112,27 @@
             justify-content: flex-start;
             flex-shrink: 0;
             box-sizing: border-box;
-            margin-top: 36px; /* Aligns visually with the chart below the legend */
+            margin-top: 36px;
         }
         
-        .chart-stats {
-            text-align: left;
-        }
+        .chart-stats { text-align: left; }
 
         .stat-label {
-            color: #8E8E93;
-            font-size: 1rem;
-            font-weight: 600;
-            margin-bottom: 5px;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
+            color: #8E8E93; font-size: 1rem; font-weight: 600; margin-bottom: 5px;
+            text-transform: uppercase; letter-spacing: 0.05em;
         }
         
         #stat-price {
-            font-size: 3rem;
-            font-weight: 600;
-            color: #FFFFFF;
-            letter-spacing: -0.04em;
-            margin-bottom: 5px;
-            font-variant-numeric: tabular-nums; 
+            font-size: 3rem; font-weight: 600; color: #FFFFFF;
+            letter-spacing: -0.04em; margin-bottom: 5px; font-variant-numeric: tabular-nums; 
         }
         
         #stat-change {
-            font-size: 1.15rem;
-            font-weight: 600;
-            font-variant-numeric: tabular-nums;
+            font-size: 1.15rem; font-weight: 600; font-variant-numeric: tabular-nums;
             transition: color 0.1s ease;
         }
 
-        #stat-date {
-            color: #8E8E93;
-            font-size: 0.95rem;
-            margin-top: 10px;
-            font-weight: 400;
-        }
+        #stat-date { color: #8E8E93; font-size: 0.95rem; margin-top: 10px; font-weight: 400; }
         
         .chart-footer {
             display: flex; justify-content: space-between; align-items: center;
@@ -257,13 +238,8 @@
         let localMemoryDB = { intraday: {}, macro: {} };
         
         let state = {
-            points: [],
-            scaleX: 1,
-            offsetX: 0,
-            isDragging: false,
-            startX: 0,
-            hoverIndex: -1,
-            hoverPos: null
+            points: [], scaleX: 1, offsetX: 0, isDragging: false,
+            startX: 0, hoverIndex: -1, hoverPos: null
         };
 
         const DOM = {
@@ -292,7 +268,6 @@
                 liveSocket.close();
             }
 
-            // REMINDER: Paste your Finnhub Key right here!
             const API_KEY = "d8ppadpr01qqd60jn7o0d8ppadpr01qqd60jn7og"; 
             liveSocket = new WebSocket(`wss://ws.finnhub.io?token=${API_KEY}`);
 
@@ -623,9 +598,6 @@
         function renderCanvas() {
             if (state.points.length === 0) return;
 
-            // ==========================================
-            // UI OVERLAY: INTERACTIVE SIDE PANEL
-            // ==========================================
             let displayIdx = (state.hoverIndex !== -1) ? state.hoverIndex : state.points.length - 1;
             const activeData = state.points[displayIdx];
             const startPriceData = state.points[0].price;
@@ -646,9 +618,6 @@
             const timeLabel = formatTimeString(activeData.timeStr, false);
             DOM.statDate.innerText = timeLabel;
 
-            // ==========================================
-            // CORE CANVAS RENDERING ENGINE
-            // ==========================================
             const canvas = DOM.canvas;
             const ctx = canvas.getContext('2d');
             
@@ -774,7 +743,6 @@
             ctx.lineCap = 'round';
             ctx.stroke();
 
-            // Hover crosshair and tracker dot (tooltips removed per request)
             if (state.hoverIndex !== -1 && renderCoords[state.hoverIndex]) {
                 const activePt = renderCoords[state.hoverIndex];
                 
@@ -817,61 +785,124 @@
             }
         }
 
+        // ==========================================
+        // DYNAMIC MARKET HOLIDAY & CLOCK ENGINE
+        // ==========================================
+        function getDayStatus(y, m, d) {
+            const dateObj = new Date(y, m - 1, d);
+            const dayOfWeek = dateObj.getDay();
+            if (dayOfWeek === 0 || dayOfWeek === 6) return { isOpen: false, closeTime: 0, reason: "Weekend" };
+
+            let nyd = new Date(y, 0, 1);
+            let nydObserved = nyd.getDay() === 0 ? new Date(y, 0, 2) : (nyd.getDay() === 6 ? null : nyd);
+            
+            let mlk = new Date(y, 0, 1); mlk.setDate(1 + (8 - mlk.getDay()) % 7 + 14);
+            let pres = new Date(y, 1, 1); pres.setDate(1 + (8 - pres.getDay()) % 7 + 14);
+            
+            // Computus Algorithm for Good Friday mapping
+            const a = y % 19, b = Math.floor(y / 100), c = y % 100, d1 = Math.floor(b / 4), e = b % 4, f = Math.floor((b + 8) / 25), g = Math.floor((b - f + 1) / 3), h = (19 * a + b - d1 - g + 15) % 30, i = Math.floor(c / 4), k = c % 4, l = (32 + 2 * e + 2 * i - h - k) % 7, m1 = Math.floor((a + 11 * h + 22 * l) / 451), emonth = Math.floor((h + l - 7 * m1 + 114) / 31) - 1, eday = ((h + l - 7 * m1 + 114) % 31) + 1;
+            let gf = new Date(y, emonth, eday); gf.setDate(gf.getDate() - 2);
+            
+            let mem = new Date(y, 5, 0); mem.setDate(mem.getDate() - (mem.getDay() === 0 ? 6 : mem.getDay() - 1));
+            
+            let jte = new Date(y, 5, 19);
+            let jteObserved = jte.getDay() === 0 ? new Date(y, 5, 20) : (jte.getDay() === 6 ? new Date(y, 5, 18) : jte);
+            
+            let ind = new Date(y, 6, 4);
+            let indObserved = ind.getDay() === 0 ? new Date(y, 6, 5) : (ind.getDay() === 6 ? new Date(y, 6, 3) : ind);
+            
+            let lab = new Date(y, 8, 1); lab.setDate(1 + (8 - lab.getDay()) % 7);
+            let txg = new Date(y, 10, 1); txg.setDate(1 + (11 - txg.getDay()) % 7 + 21);
+            
+            let chr = new Date(y, 11, 25);
+            let chrObserved = chr.getDay() === 0 ? new Date(y, 11, 26) : (chr.getDay() === 6 ? new Date(y, 11, 24) : chr);
+
+            const holidays = [nydObserved, mlk, pres, gf, mem, jteObserved, indObserved, lab, txg, chrObserved].filter(Boolean);
+            const isHoliday = holidays.some(h => h.getMonth() === m - 1 && h.getDate() === d);
+            if (isHoliday) return { isOpen: false, closeTime: 0, reason: "Holiday" };
+
+            let isEarlyClose = false;
+            let bf = new Date(txg); bf.setDate(bf.getDate() + 1);
+            if (m - 1 === bf.getMonth() && d === bf.getDate()) isEarlyClose = true;
+            if (m === 12 && d === 24 && dayOfWeek >= 1 && dayOfWeek <= 4) isEarlyClose = true;
+            if (m === 7 && d === 3 && (ind.getDay() >= 2 && ind.getDay() <= 5)) isEarlyClose = true;
+
+            // 13:00 ET for Early Close, 16:00 ET for Standard Close
+            return { isOpen: true, closeTime: isEarlyClose ? 13 * 60 : 16 * 60, reason: "Open" };
+        }
+
         function updateClockAndStatus() {
             const now = new Date();
-            const timeOptions = { timeZone: 'America/Chicago', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true };
             
-            DOM.clock.innerText = `Time: ${now.toLocaleTimeString('en-US', timeOptions)}`;
+            // Format to explicitly display the Central Time format string on UI
+            const ctOptions = { timeZone: 'America/Chicago', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true };
+            DOM.clock.innerText = `Time: ${now.toLocaleTimeString('en-US', ctOptions)}`;
 
-            const ctString = now.toLocaleString("en-US", { timeZone: "America/Chicago" });
-            const ctDate = new Date(ctString);
-            const day = ctDate.getDay(); 
-            const hour = ctDate.getHours(); 
-            const minute = ctDate.getMinutes(); 
+            // Pull raw Eastern Time components strictly for math evaluation
+            const formatter = new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: 'numeric', hour12: false });
+            const parts = formatter.formatToParts(now);
+            const p = {}; parts.forEach(pt => p[pt.type] = parseInt(pt.value));
             
-            const timeInMinutes = (hour * 60) + minute;
-            const marketOpen = (8 * 60) + 30; 
-            const marketClose = 15 * 60;      
+            if (p.hour === 24) p.hour = 0; 
+
+            const currentMins = p.hour * 60 + p.minute;
+            const openMins = 9 * 60 + 30; // 9:30 AM ET
             
+            let currentStatus = getDayStatus(p.year, p.month, p.day);
             let isMarketOpen = false;
-            if (day !== 0 && day !== 6 && timeInMinutes >= marketOpen && timeInMinutes < marketClose) {
-                isMarketOpen = true;
-            }
+            let countdownText = "";
             
-            if (isMarketOpen) {
+            if (currentStatus.isOpen && currentMins >= openMins && currentMins < currentStatus.closeTime) {
+                isMarketOpen = true;
+                let diff = currentStatus.closeTime - currentMins;
+                let hrs = Math.floor(diff / 60);
+                let mins = diff % 60;
+                countdownText = `Market closes in ${hrs > 0 ? hrs + 'h ' : ''}${mins}m`;
                 DOM.status.innerHTML = `Live Tracking <span style="color: #28C76F; font-weight: 600;">(Market Open)</span>`;
             } else {
-                DOM.status.innerHTML = `Live Tracking <span style="color: #BFBFBF; font-weight: 600;">(Market Closed)</span>`;
+                if (!currentStatus.isOpen) {
+                    DOM.status.innerHTML = `Live Tracking <span style="color: #BFBFBF; font-weight: 600;">(Market Closed - ${currentStatus.reason})</span>`;
+                } else {
+                    DOM.status.innerHTML = `Live Tracking <span style="color: #BFBFBF; font-weight: 600;">(Market Closed)</span>`;
+                }
+                
+                let foundOpen = false;
+                let minutesUntilOpen = 0;
+                
+                if (currentStatus.isOpen && currentMins < openMins) {
+                    foundOpen = true;
+                    minutesUntilOpen = openMins - currentMins;
+                } else {
+                    let checkDate = new Date(now.toLocaleString("en-US", { timeZone: "America/New_York" }));
+                    let daysAdded = 0;
+                    while (!foundOpen && daysAdded < 14) {
+                        checkDate.setDate(checkDate.getDate() + 1);
+                        daysAdded++;
+                        let status = getDayStatus(checkDate.getFullYear(), checkDate.getMonth() + 1, checkDate.getDate());
+                        if (status.isOpen) {
+                            foundOpen = true;
+                            let minsToMidnight = (24 * 60) - currentMins;
+                            minutesUntilOpen = minsToMidnight + ((daysAdded - 1) * 24 * 60) + openMins;
+                        }
+                    }
+                }
+                
+                if (foundOpen) {
+                    let d = Math.floor(minutesUntilOpen / (24 * 60));
+                    let h = Math.floor((minutesUntilOpen % (24 * 60)) / 60);
+                    let m = minutesUntilOpen % 60;
+                    
+                    let timeString = "";
+                    if (d > 0) timeString += `${d}d `;
+                    if (h > 0 || d > 0) timeString += `${h}h `;
+                    timeString += `${m}m`;
+                    
+                    countdownText = `Market opens in ${timeString.trim()}`;
+                } else {
+                    countdownText = `Market closed`;
+                }
             }
-
-            let targetDayOffset = 0;
-            let targetMinutes = 0;
-            let isClosing = false;
-            
-            if (day === 0) { targetDayOffset = 1; targetMinutes = marketOpen; } 
-            else if (day === 6) { targetDayOffset = 2; targetMinutes = marketOpen; } 
-            else { 
-                if (timeInMinutes < marketOpen) { targetDayOffset = 0; targetMinutes = marketOpen; } 
-                else if (timeInMinutes >= marketOpen && timeInMinutes < marketClose) { targetDayOffset = 0; targetMinutes = marketClose; isClosing = true; } 
-                else { targetDayOffset = (day === 5) ? 3 : 1; targetMinutes = marketOpen; }
-            }
-            
-            let diffMinutes = 0;
-            if (targetDayOffset === 0) { diffMinutes = targetMinutes - timeInMinutes; } 
-            else { diffMinutes = (24 * 60 - timeInMinutes) + ((targetDayOffset - 1) * 24 * 60) + targetMinutes; }
-            
-            const totalHrs = Math.floor(diffMinutes / 60);
-            const diffMins = diffMinutes % 60;
-            const diffDays = Math.floor(totalHrs / 24);
-            const remainingHrs = totalHrs % 24;
-            
-            let timeString = "";
-            if (diffDays > 0) { timeString = `${diffDays}d ${remainingHrs}h`; } 
-            else if (remainingHrs > 0) { timeString = `${remainingHrs}h ${diffMins}m`; } 
-            else { timeString = `${diffMins}m`; }
-            
-            if (isClosing) { DOM.countdown.innerText = `Market closes in ${timeString}`; } 
-            else { DOM.countdown.innerText = `Market opens in ${timeString}`; }
+            DOM.countdown.innerText = countdownText;
         }
 
         setInterval(updateClockAndStatus, 1000);

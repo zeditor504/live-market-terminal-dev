@@ -3,6 +3,7 @@ from google.oauth2.service_account import Credentials
 import yfinance as yf
 import pandas as pd
 from datetime import datetime
+import pytz
 import sys
 import traceback
 import concurrent.futures
@@ -12,8 +13,35 @@ def fetch_ticker_data(ticker):
         stock = yf.Ticker(ticker)
         
         exact_current_price = round(float(stock.fast_info['last_price']), 2)
-        previous_price = round(float(stock.fast_info['previous_close']), 2)
         
+        # ==========================================
+        # ACCURATE PREVIOUS CLOSE ENGINE
+        # ==========================================
+        # Bypasses the yfinance fast_info caching bug by extracting the true close
+        # directly from the historical dataset and cross-referencing market dates.
+        recent_hist = stock.history(period="5d", auto_adjust=True)
+        recent_hist = recent_hist.dropna(subset=['Close'])
+        
+        if len(recent_hist) >= 2:
+            ny_tz = pytz.timezone('America/New_York')
+            ny_date = datetime.now(ny_tz).date()
+            last_hist_date = recent_hist.index[-1].date()
+            
+            if last_hist_date == ny_date:
+                # Market is open/active today, so yesterday is the second-to-last row
+                previous_price = round(float(recent_hist['Close'].iloc[-2]), 2)
+            else:
+                # Pre-market or holiday, where the last row is the most recent completed session
+                previous_price = round(float(recent_hist['Close'].iloc[-1]), 2)
+                
+            # HOLIDAY ZERO-CHANGE FIX:
+            # If the current live price is exactly the same as the last session's close,
+            # the market is closed. We step back one more day to show the last active daily change.
+            if exact_current_price == previous_price and len(recent_hist) >= 3:
+                previous_price = round(float(recent_hist['Close'].iloc[-2]), 2)
+        else:
+            previous_price = round(float(stock.fast_info['previous_close']), 2)
+            
         hist = stock.history(period="1y", auto_adjust=False, actions=True)
         hist = hist.dropna(subset=['Close', 'High'])
         
@@ -69,7 +97,6 @@ def fetch_intraday_data(ticker):
             dt_str = timestamp.strftime('%Y-%m-%d %H:%M:%S')
             price = round(float(row['Close']), 2)
             volume = int(row['Volume']) if pd.notna(row['Volume']) else 0
-            # Added Volume column
             rows.append([dt_str, ticker, price, volume])
             
         if rows:
@@ -104,7 +131,6 @@ def fetch_macro_data(ticker):
                 dt_str = timestamp.strftime('%Y-%m-%d %H:%M:%S')
                 price = round(float(row['Close']), 2)
                 volume = int(row['Volume']) if pd.notna(row['Volume']) else 0
-                # Added Volume column
                 timeframe_rows.append([dt_str, ticker, timeframe, price, volume])
 
             if timeframe_rows:
@@ -178,16 +204,23 @@ def main():
         df['Daily Change (%)'] = df['Daily Change (%)'].apply(format_arrow_pct)
 
         final_batch = [[f"{run_date}", "", "", "", "", "", "", "", "", ""]] + df.values.tolist() + [["", "", "", "", "", "", "", "", "", ""]]
-        sheet.insert_rows(final_batch, 2, value_input_option='USER_ENTERED')
-        print("✅ Success! Daily History updated.")
+        
+        try:
+            top_cell = sheet.get('A2')
+            existing_date = top_cell[0][0] if (top_cell and len(top_cell[0]) > 0) else None
+        except:
+            existing_date = None
 
-        # ==========================================
-        # INTRADAY 1-MINUTE DATA PIPELINE
-        # ==========================================
+        if existing_date == run_date:
+            sheet.update(values=final_batch, range_name='A2:J10')
+            print(f"✅ Success! Data for {run_date} overwritten to prevent duplication.")
+        else:
+            sheet.insert_rows(final_batch, 2, value_input_option='USER_ENTERED')
+            print(f"✅ Success! New Daily History block inserted for {run_date}.")
+
         print("\nInitiating Intraday Data Pipeline...")
         try:
             intraday_sheet = client.open("Daily Market Data").worksheet("Intraday")
-            # Added Volume Header
             intraday_rows = [["Datetime", "Symbol", "Price", "Volume"]]
             
             with concurrent.futures.ThreadPoolExecutor(max_workers=len(tickers)) as executor:
@@ -198,18 +231,14 @@ def main():
                         
             if len(intraday_rows) > 1:
                 intraday_sheet.clear()
-                intraday_sheet.update(range_name='A1', values=intraday_rows)
+                intraday_sheet.update(values=intraday_rows, range_name='A1')
                 print("✅ Success! Intraday Database updated.")
         except Exception as e:
             print(f"❌ Intraday error: {e}")
 
-        # ==========================================
-        # MACRO HISTORY DATA PIPELINE
-        # ==========================================
         print("\nInitiating Macro Historical Data Pipeline...")
         try:
             macro_sheet = client.open("Daily Market Data").worksheet("MacroHistory")
-            # Added Volume Header
             macro_rows = [["Datetime", "Symbol", "Timeframe", "Price", "Volume"]]
             
             with concurrent.futures.ThreadPoolExecutor(max_workers=len(tickers)) as executor:
@@ -223,7 +252,7 @@ def main():
                 print("Clearing historical macro data...")
                 macro_sheet.clear()
                 print(f"Pushing {len(macro_rows)} new macro coordinates...")
-                macro_sheet.update(range_name='A1', values=macro_rows)
+                macro_sheet.update(values=macro_rows, range_name='A1')
                 print("✅ Success! Macro Database updated.")
             else:
                 print("[!] Warning: No macro data collected.")
