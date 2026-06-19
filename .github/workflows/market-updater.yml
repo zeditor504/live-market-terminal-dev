@@ -1,10 +1,10 @@
-name: End of Day Market Pipeline
+name: Live Market Pipeline
 
 on:
   schedule:
-    # Runs at 5:00 PM Central Time (22:00 UTC) every Monday through Friday
-    - cron: '0 22 * * 1-5'
-  workflow_dispatch: # Allows you to click a "Run manually" button on GitHub
+    # Runs every 5 minutes during market hours (Mon-Fri, 13:00 - 21:00 UTC)
+    - cron: '*/5 13-21 * * 1-5'
+  workflow_dispatch: # Allows manual triggering from GitHub
 
 jobs:
   update-database:
