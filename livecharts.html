@@ -20,7 +20,8 @@
             -webkit-font-smoothing: antialiased;
         }
         
-        .header, .toggle-container {
+        /* Added legend-container to the shared width block for perfect left-alignment */
+        .header, .toggle-container, .legend-container {
             width: 95vw; max-width: 1400px;
         }
 
@@ -101,6 +102,7 @@
             color: #8E8E93; font-weight: 600; font-size: 1.1rem; display: none; pointer-events: none;
         }
 
+        /* Removed margin-top to guarantee sub-pixel alignment with the chart wrapper */
         .side-panel {
             width: 300px;
             background-color: #111111;
@@ -112,7 +114,6 @@
             justify-content: flex-start;
             flex-shrink: 0;
             box-sizing: border-box;
-            margin-top: 36px;
         }
         
         .chart-stats { text-align: left; }
@@ -146,7 +147,7 @@
 
         @media (max-width: 900px) {
             .main-content { flex-direction: column; align-items: stretch; }
-            .side-panel { width: auto; margin-top: 0; padding: 20px; flex-direction: row; justify-content: space-between; align-items: center; }
+            .side-panel { width: auto; padding: 20px; flex-direction: row; justify-content: space-between; align-items: center; }
             .side-panel > div { display: flex; flex-direction: column; }
             #stat-price { font-size: 2.2rem; margin-bottom: 0; }
             #stat-change { font-size: 1rem; }
@@ -191,14 +192,14 @@
         <button class="toggle-btn time-btn" onclick="setTime('range', 'ALL', this)">Max</button>
     </div>
 
+    <div class="legend-container">
+        <div class="legend-item"><div class="color-square" style="background-color: #2863fc;"></div><span class="legend-text">Price Trend</span></div>
+        <div class="legend-item"><div class="color-square" style="background-color: #e95448;"></div><span class="legend-text">Demand</span></div>
+        <div class="legend-item"><div class="color-square" style="background-color: #30998b;"></div><span class="legend-text">Supply</span></div>
+    </div>
+
     <div class="main-content">
         <div class="chart-section">
-            <div class="legend-container">
-                <div class="legend-item"><div class="color-square" style="background-color: #2863fc;"></div><span class="legend-text">Price Trend</span></div>
-                <div class="legend-item"><div class="color-square" style="background-color: #e95448;"></div><span class="legend-text">Demand</span></div>
-                <div class="legend-item"><div class="color-square" style="background-color: #30998b;"></div><span class="legend-text">Supply</span></div>
-            </div>
-
             <div class="chart-wrapper">
                 <div id="chart-msg-overlay" class="chart-message">Syncing Databases...</div>
                 <canvas id="native-canvas-chart"></canvas>
@@ -268,8 +269,7 @@
                 liveSocket.close();
             }
 
-            // 🛑 CRITICAL FIX: REPLACE THIS STRING WITH YOUR ACTUAL FINNHUB KEY 🛑
-            const API_KEY = "d8ppadpr01qqd60jn7o0d8ppadpr01qqd60jn7og";
+            const API_KEY = "d8ppadpr01qqd60jn7o0d8ppadpr01qqd60jn7og"; 
             
             liveSocket = new WebSocket(`wss://ws.finnhub.io?token=${API_KEY}`);
 
@@ -305,8 +305,6 @@
                             let currentDay = dtStr.substring(0, 10);
                             let lastDay = lastPoint.timeStr.substring(0, 10);
 
-                            // STALE DATA FIREWALL: 
-                            // If the incoming live trade is from today, but the array is stuck on yesterday, wipe it clean.
                             if (currentDay !== lastDay) {
                                 localMemoryDB.intraday[ticker] = [{ timeStr: dtStr, price: currentPrice, volume: tradeVolume }];
                             } else if (currentMinute === lastMinute) {
