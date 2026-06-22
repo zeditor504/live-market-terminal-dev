@@ -13,7 +13,6 @@ import pandas_market_calendars as mcal
 # INSTITUTIONAL MARKET CALENDAR FIREWALL
 # ==========================================
 def is_market_open_now():
-    """Cross-references the official NYSE calendar to prevent unnecessary script execution."""
     nyse = mcal.get_calendar('NYSE')
     now_ny = pd.Timestamp.now(tz='America/New_York')
     now_utc = pd.Timestamp.now(tz='UTC')
@@ -26,7 +25,6 @@ def is_market_open_now():
     market_open = sched.iloc[0]['market_open']
     market_close = sched.iloc[0]['market_close']
     
-    # We allow the bot to run up to 15 minutes AFTER the bell to catch final delayed broker settlements
     if now_utc < market_open:
         return False, "Pre-market"
         
@@ -34,14 +32,6 @@ def is_market_open_now():
         return False, "Post-market (Final settlements already collected)"
         
     return True, "Market Open"
-
-# ==========================================
-# TIMEZONE STANDARDIZATION ENGINE
-# ==========================================
-def get_ct_time_str(timestamp):
-    if getattr(timestamp, 'tzinfo', None) is None:
-        timestamp = timestamp.tz_localize('America/New_York')
-    return timestamp.tz_convert('America/Chicago').strftime('%Y-%m-%d %H:%M:%S')
 
 def fetch_ticker_data(ticker):
     try:
@@ -121,9 +111,19 @@ def fetch_intraday_data(ticker):
         hist = stock.history(period="1d", interval="1m", auto_adjust=False)
         hist = hist.dropna(subset=['Close'])
         
+        if hist.empty:
+            return [], None
+
+        # ==========================================
+        # PERMANENT VECTORIZED TIMEZONE FIX
+        # ==========================================
+        if getattr(hist.index, 'tz', None) is None:
+            hist.index = hist.index.tz_localize('America/New_York')
+        hist.index = hist.index.tz_convert('America/Chicago')
+        
         rows = []
         for timestamp, row in hist.iterrows():
-            dt_str = get_ct_time_str(timestamp)
+            dt_str = timestamp.strftime('%Y-%m-%d %H:%M:%S')
             price = round(float(row['Close']), 2)
             volume = int(row['Volume']) if pd.notna(row['Volume']) else 0
             rows.append([dt_str, ticker, price, volume])
@@ -155,9 +155,20 @@ def fetch_macro_data(ticker):
             hist = stock.history(period=config["period"], interval=config["interval"], auto_adjust=True)
             hist = hist.dropna(subset=['Close'])
 
+            if not hist.empty:
+                # Only shift intraday macro data. Shifting 1d data causes midnight rollback bugs.
+                if config["interval"] in ["15m", "1h"]:
+                    if getattr(hist.index, 'tz', None) is None:
+                        hist.index = hist.index.tz_localize('America/New_York')
+                    hist.index = hist.index.tz_convert('America/Chicago')
+
             timeframe_rows = []
             for timestamp, row in hist.iterrows():
-                dt_str = get_ct_time_str(timestamp)
+                if config["interval"] == "1d":
+                    dt_str = timestamp.strftime('%Y-%m-%d') + " 15:00:00"
+                else:
+                    dt_str = timestamp.strftime('%Y-%m-%d %H:%M:%S')
+                    
                 price = round(float(row['Close']), 2)
                 volume = int(row['Volume']) if pd.notna(row['Volume']) else 0
                 timeframe_rows.append([dt_str, ticker, timeframe, price, volume])
