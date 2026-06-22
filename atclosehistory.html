@@ -3,511 +3,226 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>At Close History | Live Market Terminal</title>
+    <title>At Close History</title>
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;600;700&display=swap" rel="stylesheet">
     
     <style>
-        /* Base document properties */
-        body {
-            margin: 0; padding: 20px 0; background-color: #000000;
+        body { 
+            margin: 0; padding: 20px 0; background-color: #000000; 
             font-family: 'Inter Tight', sans-serif; color: #FFFFFF;
             min-height: 100vh; display: flex; flex-direction: column;
             align-items: center; overflow-x: hidden;
-        }
-        
-        /* Header layout and typography */
-        .header { 
-            text-align: center; width: 95vw; max-width: 1400px;
-            display: flex; justify-content: center; align-items: center; position: relative;
-            flex-shrink: 0; margin-bottom: 25px; margin-top: 10px;
-        }
-        
-        /* Light gray to white shifting gradient text effect */
-        .header h1 { 
-            margin: 0; font-size: 1.8rem; font-weight: 600; letter-spacing: -0.5px;
-            background: linear-gradient(120deg, #8E8E93, #FFFFFF, #8E8E93, #FFFFFF);
-            background-size: 300% 300%;
-            background-clip: text;
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            animation: shimmerFlow 8s ease infinite;
+            letter-spacing: -0.02em;
+            -webkit-font-smoothing: antialiased;
         }
 
-        @keyframes shimmerFlow {
-            0% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-            100% { background-position: 0% 50%; }
+        .header-bar {
+            width: 95vw; max-width: 1400px;
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 20px;
         }
-        
-        /* Navigation routing button */
-        .nav-btn {
-            position: absolute; left: 0;
-            background-color: #1C1C1E; color: #8E8E93; text-decoration: none;
-            padding: 8px 16px; border-radius: 100px; font-weight: 600; font-size: 0.9rem;
-            transition: all 0.2s ease; border: 1px solid transparent;
-        }
-        
-        .nav-btn:hover { color: #FFFFFF; background-color: #3A3A3C; }
 
-        /* Dynamic Reset Button */
-        .reset-btn {
-            background-color: #f4cccc; color: #cc0000; border: 1px solid transparent;
-            padding: 5px 12px; border-radius: 100px; font-weight: 700; font-size: 0.8rem;
-            cursor: pointer; transition: all 0.2s ease; font-family: 'Inter Tight', sans-serif;
-            margin-top: 8px; display: none; /* Hidden by default */
+        .back-btn {
+            background-color: #1C1C1E; color: #8E8E93; border: none;
+            padding: 8px 16px; border-radius: 100px; font-weight: 600;
+            text-decoration: none; font-size: 0.9rem; transition: all 0.2s ease;
         }
-        .reset-btn:hover { background-color: #e6b8b8; color: #990000; }
-        
-        /* Dynamic Filtering Status Display */
-        .filter-status {
-            position: absolute; right: 0;
-            color: #FFFFFF; font-weight: 600; font-size: 0.95rem;
-            text-align: right;
-        }
-        
-        /* Secondary Sorting Direction Text */
-        .filter-direction {
-            display: block;
-            font-size: 0.8rem;
-            color: #8E8E93;
-            font-weight: 400;
-            margin-top: 2px;
-        }
-        
-        /* Native Data Table Styling */
+        .back-btn:hover { color: #FFFFFF; background-color: #3A3A3C; }
+
+        .title { font-size: 1.8rem; font-weight: 700; margin: 0; position: absolute; left: 50%; transform: translateX(-50%); }
+
+        .filter-info { text-align: right; font-size: 0.85rem; font-weight: 600; color: #FFFFFF; }
+        .filter-info span { color: #8E8E93; font-weight: 400; }
+
         .table-container {
             width: 95vw; max-width: 1400px;
-            overflow-x: auto;
+            border-radius: 10px; overflow: hidden;
             border: 1px solid #1C1C1E;
-            border-radius: 8px;
             background-color: #000000;
-            display: none; /* Hidden until Javascript paints the data */
-        }
-        
-        table {
-            width: 100%; border-collapse: collapse; text-align: center;
-            font-size: 0.95rem; white-space: nowrap;
-            font-variant-numeric: tabular-nums;
-        }
-        
-        /* Complete Unified Styling for every single cell */
-        th, td {
-            padding: 13px 15px;
-            border-bottom: 1px solid #1C1C1E;
-            border-right: 1px solid #1C1C1E;
-            vertical-align: middle !important;
-            text-align: center !important;
-        }
-        
-        th {
-            border-bottom: 2px solid #FFFFFF; 
-            border-right: 1px solid #2C2C2E;
-            color: #FFFFFF; font-weight: 700;
-            background-color: #000000;
-            position: sticky; top: 0; z-index: 10;
         }
 
-        th:last-child, td:last-child { border-right: none; }
+        table { width: 100%; border-collapse: collapse; }
         
-        /* Bold weighting for Stock Symbol labels */
-        td:first-child { font-weight: 700; }
-
-        /* --- Interactive Sorting Headers --- */
-        th.sortable {
-            cursor: pointer;
-            transition: all 0.2s ease;
-            user-select: none;
+        thead { background-color: #000000; }
+        th { 
+            padding: 16px 10px; text-align: center; font-size: 0.85rem; 
+            text-transform: uppercase; font-weight: 700;
+            border-bottom: 2px solid #1C1C1E; border-right: 1px solid #1C1C1E;
+            white-space: nowrap;
         }
+        th:last-child { border-right: none; }
+
+        tbody tr { border-bottom: 1px solid #1C1C1E; }
+        tbody tr:last-child { border-bottom: none; }
         
-        th.sortable:hover { background-color: #1C1C1E; }
-
-        .sort-icon {
-            display: inline-block;
-            font-size: 0.75rem;
-            margin-left: 6px;
-            color: #3A3A3C;
-            transition: color 0.2s ease;
+        td { 
+            padding: 14px 10px; text-align: center; font-size: 0.95rem; font-weight: 600;
+            border-right: 1px solid #1C1C1E; font-variant-numeric: tabular-nums;
         }
+        td:last-child { border-right: none; }
 
-        th.sortable:hover .sort-icon { color: #8E8E93; }
-
-        /* Maximum Contrast Active Filter State (Black on White) */
-        th.sortable.active-sort { 
-            background-color: #FFFFFF !important; 
-            color: #000000 !important; 
-            border-bottom: 2px solid #FFFFFF !important; /* Blends border smoothly */
-        }
-        
-        /* Slight off-white hover feedback for the active white column */
-        th.sortable.active-sort:hover {
-            background-color: #F2F2F7 !important;
+        .date-row { background-color: #111111; }
+        .date-row td { 
+            padding: 12px; font-size: 1.05rem; font-weight: 700; 
+            color: #FFFFFF; border-right: none;
         }
 
-        /* Forces active icons to match the black text inversion */
-        th.sortable.active-sort .sort-icon,
-        th.sortable .sort-icon.active { 
-            color: #000000 !important; 
+        /* Institutional Color Coding */
+        .change-pos { background-color: #C8E6C9; color: #1B5E20; }
+        .change-neg { background-color: #FFCDD2; color: #B71C1C; }
+        .profit-cell { background-color: #FFE0B2; color: #E65100; }
+        .upside-cell { background-color: #3949AB; color: #FFFFFF; }
+
+        /* Institutional Compliance Footer */
+        .legal-disclaimer {
+            width: 95vw; max-width: 1400px;
+            margin-top: 30px; padding-top: 15px;
+            border-top: 1px solid #1C1C1E;
+            color: #636366; font-size: 0.75rem;
+            line-height: 1.5; text-align: justify;
         }
 
-        /* Conditional formatting custom classes */
-        .bg-pos { background-color: #c8e6c9 !important; color: #2e7d32 !important; font-weight: 600; }
-        .bg-neg { background-color: #f4cccc !important; color: #cc0000 !important; font-weight: 600; }
-        .bg-gold { background-color: #fff2cc !important; color: #b45f06 !important; font-weight: 700; }
-        
-        #loading { color: #8E8E93; margin-top: 50px; font-size: 1.1rem; font-weight: 600; }
-        
-        /* Custom UI Scrollbar for the table wrapper */
-        .table-container::-webkit-scrollbar { height: 8px; width: 8px; }
-        .table-container::-webkit-scrollbar-track { background: #000000; }
-        .table-container::-webkit-scrollbar-thumb { background: #2C2C2E; border-radius: 4px; }
-        .table-container::-webkit-scrollbar-thumb:hover { background: #3A3A3C; }
+        @media (max-width: 1000px) {
+            .table-container { overflow-x: auto; }
+            .title { position: static; transform: none; }
+        }
     </style>
 </head>
 <body>
 
-    <div class="header">
-        <a href="livecharts.html" class="nav-btn">◀ Back to Charts</a>
-        <h1>At Close History</h1>
-        <div style="position: absolute; right: 0; display: flex; flex-direction: column; align-items: flex-end;">
-            <div id="filter-status" class="filter-status" style="position: relative; right: auto;">
-                Filtering By: Upside Potential (Default)
-                <span class="filter-direction">High to Low</span>
-            </div>
-            <button id="reset-btn" class="reset-btn" onclick="resetFilters()">Reset Filters ↺</button>
-        </div>
+    <div class="header-bar">
+        <a href="livecharts.html" class="back-btn">◄ Back to Charts</a>
+        <h2 class="title">At Close History</h2>
+        <div class="filter-info">Filtering By: Upside Potential (Default)<br><span>High to Low</span></div>
     </div>
 
-    <div id="loading">Connecting to Database natively...</div>
-    
-    <div class="table-container" id="table-container">
+    <div class="table-container">
         <table>
             <thead>
                 <tr>
-                    <th class="sortable" id="th-symbol" onclick="handleSort('symbol')">Stock Symbol <span class="sort-icon" id="sort-symbol">↕</span></th>
-                    <th class="sortable" id="th-price" onclick="handleSort('price')">Closing Price <span class="sort-icon" id="sort-price">↕</span></th>
-                    <th colspan="2" class="sortable" id="th-chgPct" onclick="handleSort('chgPct')" title="Sorts by Percentage Change">Change over Yesterday <span class="sort-icon" id="sort-chgPct">↕</span></th>
-                    <th class="sortable" id="th-high52" onclick="handleSort('high52')" title="Sorts by Peak Price">52 Week High <span class="sort-icon" id="sort-high52">↕</span></th>
-                    <th class="sortable" id="th-highDate" onclick="handleSort('highDate')" title="Sorts by Peak Date">Peak Date <span class="sort-icon" id="sort-highDate">↕</span></th>
-                    <th class="sortable" id="th-cost" onclick="handleSort('cost')">Cost of 25 shares <span class="sort-icon" id="sort-cost">↕</span></th>
-                    <th class="sortable" id="th-profit" onclick="handleSort('profit')">Expected Profit <span class="sort-icon" id="sort-profit">↕</span></th>
-                    <th class="sortable active-sort" id="th-upside" onclick="handleSort('upside')">Upside Potential <span class="sort-icon active" id="sort-upside">▼</span></th>
+                    <th>Stock Symbol</th>
+                    <th>Closing Price</th>
+                    <th colspan="2">Change over Yesterday ↕</th>
+                    <th>52 Week High ↕</th>
+                    <th>Peak Date ↕</th>
+                    <th>Cost of 25 shares ↕</th>
+                    <th>Expected Profit ↕</th>
+                    <th>Upside Potential ▼</th>
                 </tr>
             </thead>
             <tbody id="table-body">
-            </tbody>
+                </tbody>
         </table>
     </div>
 
-    <script>
-        // Directly targets the hidden Google Sheets CSV Export endpoint
-        const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSMXRNvl_MWdY7TDj8bXruKqlFyoulqEc33XWZ1q5tY9rn2rdLSB6F-VqufSwtHup2eLvZwcBA3fX-j/pub?gid=0&single=true&output=csv";
+    <div class="legal-disclaimer">
+        <strong>Disclaimer:</strong> Content is provided "as is" for informational purposes only and does not constitute financial, legal, tax, or investment advice. This terminal is not a broker or investment adviser and does not recommend or solicit the purchase or sale of any security. Data is provided by third-party financial exchanges and may be delayed. Real-time price data represents trades executing on primary exchanges; consolidated volume information and non-primary trades may be delayed by 15 minutes. The creator expressly disclaims the accuracy, adequacy, or completeness of any data and shall not be liable for any errors, omissions, delays, or interruptions. Please consult a financial professional to verify pricing before trading.
+    </div>
 
-        // Ticker Brand Colors
-        const BRAND_COLORS = {
+    <script type="text/javascript">
+        // Standardized Daily CSV Endpoint
+        const MACRO_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSMXRNvl_MWdY7TDj8bXruKqlFyoulqEc33XWZ1q5tY9rn2rdLSB6F-VqufSwtHup2eLvZwcBA3fX-j/pub?gid=0&single=true&output=csv";
+
+        const tickerColors = {
             'TSLA': '#E31937', 'NVDA': '#76B900', 'AAPL': '#BFBFBF',
             'MSFT': '#00A4EF', 'AMZN': '#FF9900', 'GOOG': '#4285F4', 'META': '#0668E1'
         };
-        
-        // Dictionary mapping internal IDs to frontend Header Titles
-        const COLUMN_NAMES = {
-            'symbol': 'Stock Symbol',
-            'price': 'Closing Price',
-            'chgPct': 'Change over Yesterday',
-            'high52': '52 Week High',
-            'highDate': '52 Week Peak Date',
-            'cost': 'Cost of 25 shares',
-            'profit': 'Expected Profit',
-            'upside': 'Upside Potential'
-        };
 
-        // --- GLOBAL STATE MANAGEMENT ---
-        let marketData = [];
-        
-        // Defaults to Upside Potential descending, natively matching the Python Backend
-        let currentSort = { column: 'upside', direction: 'desc' }; 
-
-        // Advanced CSV Parser safely handles commas inside quoted numbers (e.g. "$10,701.25")
-        function parseCSV(str) {
-            const arr = [];
-            let quote = false;
-            let row = [], col = '';
-            for (let c = 0; c < str.length; c++) {
-                let cc = str[c], nc = str[c+1];
-                if (cc === '"' && quote && nc === '"') { col += cc; ++c; continue; }
-                if (cc === '"') { quote = !quote; continue; }
-                if (cc === ',' && !quote) { row.push(col); col = ''; continue; }
-                if (cc === '\r' && nc === '\n' && !quote) {
-                    row.push(col); arr.push(row); col = ''; row = []; ++c; continue;
+        // Custom CSV Parser to handle commas nested inside currency strings
+        function parseCSVLine(line) {
+            let result = [];
+            let cur = '';
+            let inQuotes = false;
+            for (let i = 0; i < line.length; i++) {
+                if (line[i] === '"') {
+                    inQuotes = !inQuotes;
+                } else if (line[i] === ',' && !inQuotes) {
+                    result.push(cur);
+                    cur = '';
+                } else {
+                    cur += line[i];
                 }
-                if (cc === '\n' && !quote) {
-                    row.push(col); arr.push(row); col = ''; row = []; continue;
-                }
-                col += cc;
             }
-            if (col || row.length) { row.push(col); arr.push(row); }
-            return arr;
+            result.push(cur);
+            // Strip any single quotes python injected to prevent Google Sheet formulas
+            return result.map(c => c.replace(/^"|"$/g, '').replace(/'/g, '').trim());
         }
 
-        // Heavy-duty numeric extractor explicitly strips out $, %, commas, and unicode arrows
-        function cleanNumeric(val) {
-            if (!val) return 0;
-            // Identify negative financial values safely
-            const isNegative = val.includes('-') || val.includes('↓');
-            // Remove everything except numbers and decimal points
-            const num = parseFloat(val.replace(/[^0-9.]/g, ''));
-            if (isNaN(num)) return 0;
-            return isNegative ? -num : num;
-        }
-
-        async function loadData() {
+        async function loadDatabase() {
             try {
-                // Fetch the raw data feed, appending timestamp to bypass browser cache
-                const res = await fetch(CSV_URL + "&_t=" + Date.now());
-                const text = await res.text();
-                const rows = parseCSV(text);
+                // Appended timestamp bypasses browser cache to ensure live daily pull
+                const res = await fetch(MACRO_CSV_URL + "&_t=" + Date.now());
+                const csvText = await res.text();
                 
-                let parsedData = [];
-                let currentGroup = null;
+                const lines = csvText.split(/\r?\n/);
+                const tbody = document.getElementById('table-body');
+                tbody.innerHTML = '';
 
-                for (let i = 1; i < rows.length; i++) {
-                    const row = rows[i];
-                    if (row.length < 10) continue; 
-                    
-                    const dateVal = row[0] ? row[0].replace(/^'/, '').trim() : "";
-                    const symbol = row[1] ? row[1].replace(/^'/, '').trim() : "";
-                    
-                    if (!dateVal && !symbol) continue; 
+                for (let i = 1; i < lines.length; i++) {
+                    if (!lines[i].trim()) continue;
+                    const cols = parseCSVLine(lines[i]);
 
-                    // Create relational objects based on Chronological Date Groupings
-                    if (dateVal && !symbol) {
-                        currentGroup = { date: dateVal, rows: [] };
-                        parsedData.push(currentGroup);
-                        continue;
-                    }
+                    // Identifies Date Header rows (Column 0 contains date, rest is empty)
+                    if (cols[0] && cols[0].includes('/')) {
+                        let formattedDate = cols[0];
+                        try {
+                            const parts = cols[0].split('/');
+                            const d = new Date(parts[2], parts[0] - 1, parts[1]);
+                            const weekday = d.toLocaleDateString('en-US', { weekday: 'long' });
+                            formattedDate = `${weekday}, ${cols[0]}`;
+                        } catch(e) {}
 
-                    // Push stock data payload into the active Date Group
-                    if (symbol && currentGroup) {
-                        currentGroup.rows.push({
-                            symbol: symbol,
-                            priceStr: row[2] ? row[2].replace(/^'/, '').trim() : "",
-                            num_price: cleanNumeric(row[2]),
-                            pctStr: row[3] ? row[3].replace(/^'/, '').trim() : "",
-                            num_chgPct: cleanNumeric(row[3]),
-                            dolStr: row[4] ? row[4].replace(/^'/, '').trim() : "",
-                            num_chgDol: cleanNumeric(row[4]),
-                            high52Str: row[5] ? row[5].replace(/^'/, '').trim() : "",
-                            num_high52: cleanNumeric(row[5]),
-                            highDateStr: row[6] ? row[6].replace(/^'/, '').trim() : "",
-                            num_highDate: row[6] ? new Date(row[6].replace(/^'/, '').trim()).getTime() : 0,
-                            costStr: row[7] ? row[7].replace(/^'/, '').trim() : "",
-                            num_cost: cleanNumeric(row[7]),
-                            profitStr: row[8] ? row[8].replace(/^'/, '').trim() : "",
-                            num_profit: cleanNumeric(row[8]),
-                            upsideStr: row[9] ? row[9].replace(/^'/, '').trim() : "",
-                            num_upside: cleanNumeric(row[9])
-                        });
+                        const tr = document.createElement('tr');
+                        tr.className = 'date-row';
+                        tr.innerHTML = `<td colspan="9">${formattedDate}</td>`;
+                        tbody.appendChild(tr);
+                    } 
+                    // Identifies Stock Data rows (Column 1 contains ticker)
+                    else if (cols[1]) {
+                        const ticker = cols[1];
+                        const tColor = tickerColors[ticker] || '#FFFFFF';
+
+                        const closePrice = cols[2] || '---';
+                        const changePct = cols[3] || '---';
+                        const changeDol = cols[4] || '---';
+                        const high52 = cols[5] || '---';
+                        const peakDate = cols[6] || '---';
+                        const cost25 = cols[7] || '---';
+                        const expProfit = cols[8] || '---';
+                        const upside = cols[9] || '---';
+
+                        const isPositive = changePct.includes('↑') || changePct.includes('+');
+                        const isNegative = changePct.includes('↓') || changePct.includes('-');
+
+                        let changeClass = '';
+                        if (isPositive) changeClass = 'change-pos';
+                        else if (isNegative) changeClass = 'change-neg';
+
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `
+                            <td style="color: ${tColor};">${ticker}</td>
+                            <td style="color: #FFFFFF;">${closePrice}</td>
+                            <td class="${changeClass}">${changePct}</td>
+                            <td class="${changeClass}">${changeDol}</td>
+                            <td style="color: #FFFFFF;">${high52}</td>
+                            <td style="color: #FFFFFF;">${peakDate}</td>
+                            <td style="color: #FFFFFF;">${cost25}</td>
+                            <td class="profit-cell">${expProfit}</td>
+                            <td class="upside-cell">${upside}</td>
+                        `;
+                        tbody.appendChild(tr);
                     }
                 }
-                
-                // Finalize to Global Memory and boot standard render cycle
-                marketData = parsedData;
-                applySort();
-                updateSortUI();
-                renderTable();
-
-                document.getElementById('loading').style.display = 'none';
-                document.getElementById('table-container').style.display = 'block';
-
-            } catch (err) {
-                console.error(err);
-                document.getElementById('loading').innerText = "Failed to load database. Please try refreshing.";
+            } catch (error) {
+                console.error("Database connection offline.", error);
+                document.getElementById('table-body').innerHTML = `<tr><td colspan="9" style="color:#8E8E93;">Offline: Cannot reach Google Cloud Database.</td></tr>`;
             }
         }
 
-        // --- SORTING ENGINE LOGIC ---
-        function handleSort(column) {
-            if (currentSort.column === column) {
-                // Flip direction if clicking the same column header
-                currentSort.direction = currentSort.direction === 'desc' ? 'asc' : 'desc';
-            } else {
-                // New financial columns default to descending (Highest value at the top)
-                // New text columns (Symbol) default to ascending (Alphabetical A-Z)
-                currentSort.column = column;
-                currentSort.direction = column === 'symbol' ? 'asc' : 'desc';
-            }
-            applySort();
-            updateSortUI();
-            renderTable();
-        }
-
-        function applySort() {
-            if (!currentSort.column) return;
-            
-            // Loop through each isolated date block and sort its contained stocks
-            marketData.forEach(group => {
-                group.rows.sort((a, b) => {
-                    let valA, valB;
-                    if (currentSort.column === 'symbol') {
-                        valA = a.symbol;
-                        valB = b.symbol;
-                        return currentSort.direction === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
-                    } else {
-                        valA = a['num_' + currentSort.column];
-                        valB = b['num_' + currentSort.column];
-                        return currentSort.direction === 'asc' ? valA - valB : valB - valA;
-                    }
-                });
-            });
-        }
-
-        function updateSortUI() {
-            // Strip active sort states from all headers
-            document.querySelectorAll('.sort-icon').forEach(icon => {
-                icon.innerHTML = '↕';
-                icon.classList.remove('active');
-            });
-            document.querySelectorAll('.sortable').forEach(th => {
-                th.classList.remove('active-sort');
-            });
-            
-            // Apply high-contrast white inversion to the active column
-            if (currentSort.column) {
-                const activeIcon = document.getElementById(`sort-${currentSort.column}`);
-                const activeTh = document.getElementById(`th-${currentSort.column}`);
-                if (activeIcon && activeTh) {
-                    activeIcon.innerHTML = currentSort.direction === 'desc' ? '▼' : '▲';
-                    activeIcon.classList.add('active');
-                    activeTh.classList.add('active-sort');
-                }
-            }
-            
-            // Dynamically manage the "Filtering By:" text and sub-text direction
-            const statusEl = document.getElementById('filter-status');
-            
-            let dirText = currentSort.direction === 'desc' ? 'High to Low' : 'Low to High';
-            
-            // Apply specific directional phrasing based on the column context
-            if (currentSort.column === 'symbol') {
-                dirText = currentSort.direction === 'desc' ? 'Z to A' : 'A to Z';
-            } else if (currentSort.column === 'chgPct') {
-                dirText = currentSort.direction === 'desc' ? 'Top Gainers to Top Losers' : 'Top Losers to Top Gainers';
-            } else if (currentSort.column === 'highDate') {
-                dirText = currentSort.direction === 'desc' ? 'Latest to Oldest' : 'Oldest to Latest';
-            }
-
-            // Dynamically show or hide the Reset button
-            const resetBtn = document.getElementById('reset-btn');
-            if (currentSort.column === 'upside' && currentSort.direction === 'desc') {
-                statusEl.innerHTML = `Filtering By: Upside Potential (Default)<br><span class="filter-direction">${dirText}</span>`;
-                resetBtn.style.display = 'none';
-            } else {
-                statusEl.innerHTML = `Filtering By: ${COLUMN_NAMES[currentSort.column]}<br><span class="filter-direction">${dirText}</span>`;
-                resetBtn.style.display = 'inline-block';
-            }
-        }
-
-        // --- RESET FILTERS LOGIC ---
-        function resetFilters() {
-            currentSort = { column: 'upside', direction: 'desc' };
-            applySort();
-            updateSortUI();
-            renderTable();
-        }
-
-        // --- DOM RENDERING ENGINE ---
-        function renderTable() {
-            const tbody = document.getElementById('table-body');
-            tbody.innerHTML = '';
-            
-            marketData.forEach(group => {
-                // 1. Render the Chronological Date Group Separator
-                let trDate = document.createElement('tr');
-                let tdDate = document.createElement('td');
-                
-                // Dynamically calculate the Day of the Week
-                let dateObj = new Date(group.date);
-                let dayName = dateObj.toLocaleDateString('en-US', { weekday: 'long' });
-                
-                // Format: "Friday, 06/05/2026"
-                tdDate.innerText = `${dayName}, ${group.date}`;
-                tdDate.colSpan = "9";
-                tdDate.style.fontWeight = '700';
-                tdDate.style.fontSize = '1.15rem';
-                tdDate.style.letterSpacing = '0.5px';
-                tdDate.style.lineHeight = '2.8rem';
-                tdDate.style.backgroundColor = '#1C1C1E';
-                tdDate.style.borderRight = 'none';
-                
-                trDate.appendChild(tdDate);
-                tbody.appendChild(trDate);
-                
-                // 2. Render all newly sorted stocks beneath it
-                group.rows.forEach(r => {
-                    let tr = document.createElement('tr');
-                    
-                    let tdSym = document.createElement('td');
-                    tdSym.innerText = r.symbol;
-                    tdSym.style.color = BRAND_COLORS[r.symbol] || '#FFFFFF';
-                    tr.appendChild(tdSym);
-                    
-                    let tdPrice = document.createElement('td');
-                    tdPrice.innerText = r.priceStr;
-                    tr.appendChild(tdPrice);
-                    
-                    let tdPct = document.createElement('td');
-                    tdPct.innerText = r.pctStr;
-                    if (r.pctStr.includes('↑') || r.pctStr.includes('+')) tdPct.className = 'bg-pos';
-                    else if (r.pctStr.includes('↓') || r.pctStr.includes('-')) tdPct.className = 'bg-neg';
-                    tr.appendChild(tdPct);
-                    
-                    let tdDol = document.createElement('td');
-                    tdDol.innerText = r.dolStr;
-                    if (r.dolStr.includes('↑') || r.dolStr.includes('+')) tdDol.className = 'bg-pos';
-                    else if (r.dolStr.includes('↓') || r.dolStr.includes('-')) tdDol.className = 'bg-neg';
-                    tr.appendChild(tdDol);
-                    
-                    let tdH52 = document.createElement('td');
-                    tdH52.innerText = r.high52Str;
-                    tr.appendChild(tdH52);
-                    
-                    let tdHD = document.createElement('td');
-                    tdHD.innerText = r.highDateStr;
-                    tr.appendChild(tdHD);
-                    
-                    let tdCost = document.createElement('td');
-                    tdCost.innerText = r.costStr;
-                    tr.appendChild(tdCost);
-                    
-                    // Conditionally mapped Gold text using the background numerical data
-                    let tdProf = document.createElement('td');
-                    tdProf.innerText = r.profitStr;
-                    if (r.num_profit > 1000) tdProf.className = 'bg-gold';
-                    tr.appendChild(tdProf);
-                    
-                    // Complex heat map generation utilizing the pure background float and custom Blue (#3c4bab / 60, 75, 171)
-                    let tdUp = document.createElement('td');
-                    tdUp.innerText = r.upsideStr;
-                    if (r.num_upside > 0) {
-                        let opacity = Math.min(r.num_upside / 30, 1);
-                        tdUp.style.backgroundColor = `rgba(60, 75, 171, ${opacity})`;
-                        tdUp.style.color = '#FFFFFF';
-                        tdUp.style.fontWeight = '600';
-                    }
-                    tr.appendChild(tdUp);
-                    
-                    tbody.appendChild(tr);
-                });
-            });
-        }
-        
-        // Initial boot up
-        loadData();
-
-        // Background Refresh (Will NOT reset the user's active sort choice)
-        setInterval(loadData, 60000);
+        loadDatabase();
     </script>
 </body>
 </html>
