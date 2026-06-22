@@ -8,17 +8,21 @@ import sys
 import traceback
 import concurrent.futures
 
+# ==========================================
+# TIMEZONE STANDARDIZATION ENGINE
+# ==========================================
+def get_ct_time_str(timestamp):
+    """Converts yfinance pandas timestamp (ET/UTC) to strict Central Time."""
+    if getattr(timestamp, 'tzinfo', None) is None:
+        timestamp = timestamp.tz_localize('America/New_York')
+    return timestamp.tz_convert('America/Chicago').strftime('%Y-%m-%d %H:%M:%S')
+
 def fetch_ticker_data(ticker):
     try:
         stock = yf.Ticker(ticker)
         
         exact_current_price = round(float(stock.fast_info['last_price']), 2)
         
-        # ==========================================
-        # ACCURATE PREVIOUS CLOSE ENGINE
-        # ==========================================
-        # Bypasses the yfinance fast_info caching bug by extracting the true close
-        # directly from the historical dataset and cross-referencing market dates.
         recent_hist = stock.history(period="5d", auto_adjust=True)
         recent_hist = recent_hist.dropna(subset=['Close'])
         
@@ -28,15 +32,10 @@ def fetch_ticker_data(ticker):
             last_hist_date = recent_hist.index[-1].date()
             
             if last_hist_date == ny_date:
-                # Market is open/active today, so yesterday is the second-to-last row
                 previous_price = round(float(recent_hist['Close'].iloc[-2]), 2)
             else:
-                # Pre-market or holiday, where the last row is the most recent completed session
                 previous_price = round(float(recent_hist['Close'].iloc[-1]), 2)
                 
-            # HOLIDAY ZERO-CHANGE FIX:
-            # If the current live price is exactly the same as the last session's close,
-            # the market is closed. We step back one more day to show the last active daily change.
             if exact_current_price == previous_price and len(recent_hist) >= 3:
                 previous_price = round(float(recent_hist['Close'].iloc[-2]), 2)
         else:
@@ -56,7 +55,11 @@ def fetch_ticker_data(ticker):
             hist['True_High'] = hist['High']
             
         high_52w = round(float(hist['True_High'].max()), 2)
-        high_date = hist['True_High'].idxmax().strftime('%m/%d/%Y')
+        
+        high_idx = hist['True_High'].idxmax()
+        if getattr(high_idx, 'tzinfo', None) is None:
+            high_idx = high_idx.tz_localize('America/New_York')
+        high_date = high_idx.tz_convert('America/Chicago').strftime('%m/%d/%Y')
         
         dollar_change = round(exact_current_price - previous_price, 2)
         
@@ -94,7 +97,7 @@ def fetch_intraday_data(ticker):
         
         rows = []
         for timestamp, row in hist.iterrows():
-            dt_str = timestamp.strftime('%Y-%m-%d %H:%M:%S')
+            dt_str = get_ct_time_str(timestamp)
             price = round(float(row['Close']), 2)
             volume = int(row['Volume']) if pd.notna(row['Volume']) else 0
             rows.append([dt_str, ticker, price, volume])
@@ -128,7 +131,7 @@ def fetch_macro_data(ticker):
 
             timeframe_rows = []
             for timestamp, row in hist.iterrows():
-                dt_str = timestamp.strftime('%Y-%m-%d %H:%M:%S')
+                dt_str = get_ct_time_str(timestamp)
                 price = round(float(row['Close']), 2)
                 volume = int(row['Volume']) if pd.notna(row['Volume']) else 0
                 timeframe_rows.append([dt_str, ticker, timeframe, price, volume])
@@ -154,7 +157,10 @@ def main():
         sheet = client.open("Daily Market Data").sheet1
         tickers = ['TSLA', 'NVDA', 'AAPL', 'MSFT', 'AMZN', 'GOOG', 'META']
         data_rows = []
-        run_date = datetime.now().strftime('%m/%d/%Y')
+        
+        # Enforce Central Time for the run date
+        ct_tz = pytz.timezone('America/Chicago')
+        run_date = datetime.now(ct_tz).strftime('%m/%d/%Y')
         
         print(f"Fetching live market data for {len(tickers)} tickers asynchronously...\n")
 
