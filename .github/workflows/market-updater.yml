@@ -2,13 +2,14 @@ name: Live Market Pipeline
 
 on:
   schedule:
-    # Runs every 5 minutes during market hours (Mon-Fri, 13:00 - 21:00 UTC)
+    # Runs every 5 mins during 13:00-21:00 UTC (8:00 AM - 4:00 PM CT) Mon-Fri
     - cron: '*/5 13-21 * * 1-5'
-  workflow_dispatch: # Allows manual triggering from GitHub
+  workflow_dispatch: 
 
 jobs:
   update-database:
     runs-on: ubuntu-latest
+    timeout-minutes: 3 # 🛑 ULTIMATE FAILSAFE: Kills hanging scripts to protect your monthly free quota
 
     steps:
       - name: Checkout Repository
@@ -22,7 +23,7 @@ jobs:
       - name: Install Dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install gspread google-auth yfinance pandas
+          pip install gspread google-auth yfinance pandas pandas_market_calendars pytz
 
       - name: Inject Secure Google Credentials
         run: |
@@ -30,3 +31,7 @@ jobs:
 
       - name: Execute Backend Bot
         run: python bot.py
+
+      - name: Keepalive Workflow
+        uses: gautamkrishnar/keepalive-workflow@v2
+        # 🛑 COMA PREVENTION: Prevents GitHub from turning off this automation after 60 days of inactivity

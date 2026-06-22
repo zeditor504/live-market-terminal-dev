@@ -7,12 +7,38 @@ import pytz
 import sys
 import traceback
 import concurrent.futures
+import pandas_market_calendars as mcal
+
+# ==========================================
+# INSTITUTIONAL MARKET CALENDAR FIREWALL
+# ==========================================
+def is_market_open_now():
+    """Cross-references the official NYSE calendar to prevent unnecessary script execution."""
+    nyse = mcal.get_calendar('NYSE')
+    now_ny = pd.Timestamp.now(tz='America/New_York')
+    now_utc = pd.Timestamp.now(tz='UTC')
+    
+    sched = nyse.schedule(start_date=now_ny.date(), end_date=now_ny.date())
+    
+    if sched.empty:
+        return False, "Market is closed today (Weekend/Holiday)"
+        
+    market_open = sched.iloc[0]['market_open']
+    market_close = sched.iloc[0]['market_close']
+    
+    # We allow the bot to run up to 15 minutes AFTER the bell to catch final delayed broker settlements
+    if now_utc < market_open:
+        return False, "Pre-market"
+        
+    if now_utc > (market_close + pd.Timedelta(minutes=15)):
+        return False, "Post-market (Final settlements already collected)"
+        
+    return True, "Market Open"
 
 # ==========================================
 # TIMEZONE STANDARDIZATION ENGINE
 # ==========================================
 def get_ct_time_str(timestamp):
-    """Converts yfinance pandas timestamp (ET/UTC) to strict Central Time."""
     if getattr(timestamp, 'tzinfo', None) is None:
         timestamp = timestamp.tz_localize('America/New_York')
     return timestamp.tz_convert('America/Chicago').strftime('%Y-%m-%d %H:%M:%S')
@@ -148,6 +174,13 @@ def fetch_macro_data(ticker):
 
 def main():
     try:
+        print("Checking NYSE Operational Status...")
+        is_open, reason = is_market_open_now()
+        
+        if not is_open:
+            print(f"🛑 {reason}. Script aborted to conserve GitHub server minutes.")
+            return
+
         print("Authenticating with Google Cloud...")
         scopes = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
         credentials = Credentials.from_service_account_file("credentials.json", scopes=scopes)
@@ -158,7 +191,6 @@ def main():
         tickers = ['TSLA', 'NVDA', 'AAPL', 'MSFT', 'AMZN', 'GOOG', 'META']
         data_rows = []
         
-        # Enforce Central Time for the run date
         ct_tz = pytz.timezone('America/Chicago')
         run_date = datetime.now(ct_tz).strftime('%m/%d/%Y')
         
