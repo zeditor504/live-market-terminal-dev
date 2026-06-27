@@ -114,9 +114,6 @@ def fetch_intraday_data(ticker):
         if hist.empty:
             return [], None
 
-        # ==========================================
-        # PERMANENT VECTORIZED TIMEZONE FIX
-        # ==========================================
         if getattr(hist.index, 'tz', None) is None:
             hist.index = hist.index.tz_localize('America/New_York')
         hist.index = hist.index.tz_convert('America/Chicago')
@@ -156,7 +153,6 @@ def fetch_macro_data(ticker):
             hist = hist.dropna(subset=['Close'])
 
             if not hist.empty:
-                # Only shift intraday macro data. Shifting 1d data causes midnight rollback bugs.
                 if config["interval"] in ["15m", "1h"]:
                     if getattr(hist.index, 'tz', None) is None:
                         hist.index = hist.index.tz_localize('America/New_York')
@@ -185,6 +181,14 @@ def fetch_macro_data(ticker):
 
 def main():
     try:
+        # INSTITUTIONAL DISCLAIMER LOGGING
+        print("="*60)
+        print("LEGAL DISCLAIMER:")
+        print("Content is provided 'as is' for informational purposes only.")
+        print("Not financial, legal, tax, or investment advice.")
+        print("Consolidated volume and non-primary trades may be delayed by 15 minutes.")
+        print("="*60 + "\n")
+
         print("Checking NYSE Operational Status...")
         is_open, reason = is_market_open_now()
         
